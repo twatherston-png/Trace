@@ -9,25 +9,42 @@ export default function TripList() {
   const [newTrip, setNewTrip] = useState({ name: '', start_date: '', end_date: '', notes: '' })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     loadTrips()
   }, [])
 
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [notification])
+
   const loadTrips = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('trips')
       .select('*')
       .order('start_date', { ascending: false })
 
-    if (data) setTrips(data)
+    if (error) {
+      console.error('Error loading trips:', error)
+      setNotification({ type: 'error', message: 'Failed to load trips' })
+    } else if (data) {
+      setTrips(data)
+    }
   }
 
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setNotification({ type: 'error', message: 'Not logged in' })
+      return
+    }
 
     const { error } = await supabase.from('trips').insert({
       user_id: user.id,
@@ -37,7 +54,11 @@ export default function TripList() {
       notes: newTrip.notes || null
     })
 
-    if (!error) {
+    if (error) {
+      console.error('Error creating trip:', error)
+      setNotification({ type: 'error', message: `Failed to create trip: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Trip created successfully!' })
       setShowCreateTrip(false)
       setNewTrip({ name: '', start_date: '', end_date: '', notes: '' })
       loadTrips()
@@ -49,32 +70,67 @@ export default function TripList() {
     if (!files || files.length === 0) return
 
     setUploading(true)
+    setUploadProgress(0)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setNotification({ type: 'error', message: 'Not logged in' })
+      setUploading(false)
+      return
+    }
+
+    let successCount = 0
+    let errorCount = 0
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       const fileName = `${Date.now()}-${file.name}`
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('photos')
-        .upload(fileName, file)
-
-      if (!uploadError && uploadData) {
-        const { data: { publicUrl } } = supabase.storage
+      try {
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('photos')
-          .getPublicUrl(fileName)
+          .upload(fileName, file)
 
-        await supabase.from('photos').insert({
-          trip_id: trips[0]?.id || null,
-          url: publicUrl,
-          caption: file.name
-        })
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          errorCount++
+          continue
+        }
+
+        if (uploadData) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('photos')
+            .getPublicUrl(fileName)
+
+          const { error: insertError } = await supabase.from('photos').insert({
+            trip_id: trips[0]?.id || null,
+            url: publicUrl,
+            caption: file.name
+          })
+
+          if (insertError) {
+            console.error('Insert error:', insertError)
+            errorCount++
+          } else {
+            successCount++
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err)
+        errorCount++
       }
+
+      setUploadProgress(((i + 1) / files.length) * 100)
     }
 
     setUploading(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
+
+    if (successCount > 0) {
+      setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''} successfully!` })
+    }
+    if (errorCount > 0) {
+      setNotification({ type: 'error', message: `Failed to upload ${errorCount} photo${errorCount > 1 ? 's' : ''}` })
+    }
   }
 
   return (
@@ -85,6 +141,24 @@ export default function TripList() {
       paddingBottom: '80px'
     }}>
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        {/* Notification */}
+        {notification && (
+          <div style={{
+            position: 'fixed',
+            top: '1rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: notification.type === 'success' ? '#4CAF50' : '#f44336',
+            color: 'white',
+            padding: '1rem 2rem',
+            borderRadius: '8px',
+            zIndex: 1000,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          }}>
+            {notification.message}
+          </div>
+        )}
+
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -123,18 +197,38 @@ export default function TripList() {
           style={{
             width: '100%',
             padding: '1rem',
-            marginBottom: '1.5rem',
+            marginBottom: uploading ? '0.5rem' : '1.5rem',
             borderRadius: '12px',
             border: 'none',
             background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
             color: 'white',
             fontWeight: 'bold',
-            cursor: 'pointer',
-            fontSize: '1rem'
+            cursor: uploading ? 'not-allowed' : 'pointer',
+            fontSize: '1rem',
+            opacity: uploading ? 0.7 : 1
           }}
         >
-          {uploading ? 'Uploading...' : '+ Upload Photos'}
+          {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : '+ Upload Photos'}
         </button>
+
+        {/* Upload Progress Bar */}
+        {uploading && (
+          <div style={{
+            width: '100%',
+            height: '8px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '4px',
+            marginBottom: '1.5rem',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: `${uploadProgress}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 100%)',
+              transition: 'width 0.3s ease'
+            }} />
+          </div>
+        )}
 
         {/* Create Trip Button */}
         <button
