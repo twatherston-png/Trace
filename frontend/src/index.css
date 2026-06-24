@@ -1,0 +1,30 @@
+:root {
+  --purple-deep: #2D1B4E;
+  --purple-mid: #4A2D6B;
+  --purple-light: #6B4D8E;
+  --purple-accent: #8B6DB0;
+  --gold: #D4AF37;
+  --white: #FFFFFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--purple-deep);
+  color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
+}
