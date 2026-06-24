@@ -16,6 +16,7 @@ export default function TripOverview() {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -140,7 +141,7 @@ export default function TripOverview() {
 
     const { error } = await supabase.from('journal_entries').insert({
       trip_id: tripId,
-      date: newJournal.date,
+      date: newJournal.date || null,
       location: newJournal.location || null,
       content: newJournal.content
     })
@@ -153,6 +154,76 @@ export default function TripOverview() {
       setShowJournalForm(false)
       setNewJournal({ date: '', location: '', content: '' })
       loadTripData()
+    }
+  }
+
+  const handleDeletePhoto = async (photoId: string, photoUrl: string) => {
+    if (!confirm('Delete this photo?')) return
+
+    // Extract file path from URL
+    const urlParts = photoUrl.split('/photos/')
+    if (urlParts.length < 2) {
+      setNotification({ type: 'error', message: 'Could not determine file path' })
+      return
+    }
+    const filePath = urlParts[1]
+
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('photos')
+      .remove([filePath])
+
+    if (storageError) {
+      console.error('Storage delete error:', storageError)
+    }
+
+    // Delete from database
+    const { error: dbError } = await supabase
+      .from('photos')
+      .delete()
+      .eq('id', photoId)
+
+    if (dbError) {
+      console.error('Database delete error:', dbError)
+      setNotification({ type: 'error', message: `Failed to delete photo: ${dbError.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Photo deleted successfully!' })
+      loadTripData()
+    }
+  }
+
+  const handleDeleteJournal = async (journalId: string) => {
+    if (!confirm('Delete this journal entry?')) return
+
+    const { error } = await supabase
+      .from('journal_entries')
+      .delete()
+      .eq('id', journalId)
+
+    if (error) {
+      console.error('Error deleting journal:', error)
+      setNotification({ type: 'error', message: `Failed to delete journal: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Journal entry deleted successfully!' })
+      loadTripData()
+    }
+  }
+
+  const handleDeleteTrip = async () => {
+    if (!confirm('Delete this entire trip? This will delete all photos, journal entries, and activities.')) return
+    if (!tripId) return
+
+    const { error } = await supabase
+      .from('trips')
+      .delete()
+      .eq('id', tripId)
+
+    if (error) {
+      console.error('Error deleting trip:', error)
+      setNotification({ type: 'error', message: `Failed to delete trip: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Trip deleted successfully!' })
+      navigate('/trips')
     }
   }
 
@@ -195,11 +266,13 @@ export default function TripOverview() {
             {notification.message}
           </div>
         )}
+
+        {/* Header */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '2rem',
+          marginBottom: '1rem',
           paddingTop: '1rem'
         }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{trip.name}</h1>
@@ -218,17 +291,42 @@ export default function TripOverview() {
           </button>
         </div>
 
+        {/* Trip Info */}
         <div style={{
           background: 'rgba(255, 255, 255, 0.1)',
           borderRadius: '12px',
           padding: '1.5rem',
           marginBottom: '1.5rem'
         }}>
-          <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-            {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
-          </div>
+          {(trip.start_date || trip.end_date) && (
+            <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+              {trip.start_date ? new Date(trip.start_date).toLocaleDateString() : 'No start date'} - {trip.end_date ? new Date(trip.end_date).toLocaleDateString() : 'No end date'}
+            </div>
+          )}
           {trip.notes && <div style={{ opacity: 0.8 }}>{trip.notes}</div>}
+          {!trip.start_date && !trip.end_date && !trip.notes && (
+            <div style={{ opacity: 0.5, fontStyle: 'italic' }}>No trip details yet</div>
+          )}
         </div>
+
+        {/* Delete Trip Button */}
+        <button
+          onClick={handleDeleteTrip}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            marginBottom: '1.5rem',
+            borderRadius: '12px',
+            border: '1px solid rgba(244, 67, 54, 0.5)',
+            background: 'rgba(244, 67, 54, 0.1)',
+            color: '#f44336',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontSize: '0.9rem'
+          }}
+        >
+          🗑️ Delete Trip
+        </button>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -307,7 +405,6 @@ export default function TripOverview() {
               type="date"
               value={newJournal.date}
               onChange={(e) => setNewJournal({ ...newJournal, date: e.target.value })}
-              required
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -437,6 +534,7 @@ export default function TripOverview() {
                 <div
                   key={photo.id}
                   style={{
+                    position: 'relative',
                     aspectRatio: '1',
                     borderRadius: '8px',
                     overflow: 'hidden',
@@ -446,55 +544,39 @@ export default function TripOverview() {
                   <img
                     src={photo.url}
                     alt={photo.caption || 'Photo'}
+                    onClick={() => setSelectedPhoto(photo)}
                     style={{
                       width: '100%',
                       height: '100%',
-                      objectFit: 'cover'
+                      objectFit: 'cover',
+                      cursor: 'pointer'
+                    }}
+                    onError={(e) => {
+                      console.error('Image failed to load:', photo.url)
+                      e.currentTarget.style.display = 'none'
                     }}
                   />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Activities */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Activities</h2>
-          {activities.length === 0 ? (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              padding: '2rem',
-              textAlign: 'center',
-              opacity: 0.7
-            }}>
-              No activities yet
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {activities.map(activity => (
-                <div
-                  key={activity.id}
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    padding: '1rem'
-                  }}
-                >
-                  <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    {activity.name}
-                  </div>
-                  {activity.time && (
-                    <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                      {activity.time}
-                    </div>
-                  )}
-                  {activity.location && (
-                    <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                      📍 {activity.location}
-                    </div>
-                  )}
+                  <button
+                    onClick={() => handleDeletePhoto(photo.id, photo.url)}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'rgba(244, 67, 54, 0.8)',
+                      color: 'white',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
@@ -520,17 +602,39 @@ export default function TripOverview() {
                 <div
                   key={entry.id}
                   style={{
+                    position: 'relative',
                     background: 'rgba(255, 255, 255, 0.1)',
                     borderRadius: '12px',
                     padding: '1.5rem'
                   }}
                 >
+                  <button
+                    onClick={() => handleDeleteJournal(entry.id)}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      background: 'rgba(244, 67, 54, 0.8)',
+                      color: 'white',
+                      fontSize: '16px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ×
+                  </button>
                   <div style={{
                     fontSize: '0.9rem',
                     opacity: 0.7,
                     marginBottom: '0.5rem'
                   }}>
-                    {new Date(entry.date).toLocaleDateString()}
+                    {entry.date ? new Date(entry.date).toLocaleDateString() : 'No date'}
                     {entry.location && ` • ${entry.location}`}
                   </div>
                   <div style={{ lineHeight: '1.6' }}>
@@ -541,6 +645,100 @@ export default function TripOverview() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Photo Modal */}
+      {selectedPhoto && (
+        <div
+          onClick={() => setSelectedPhoto(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '1rem'
+          }}
+        >
+          <img
+            src={selectedPhoto.url}
+            alt={selectedPhoto.caption || 'Photo'}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              borderRadius: '8px'
+            }}
+          />
+        </div>
+      )}
+
+      {/* Bottom Navigation */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'rgba(45, 27, 78, 0.95)',
+        backdropFilter: 'blur(10px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        display: 'flex',
+        justifyContent: 'space-around',
+        padding: '1rem',
+        paddingBottom: '1.5rem'
+      }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'white',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}>
+          <span style={{ fontSize: '1.5rem' }}>🏠</span>
+          Home
+        </button>
+        <button
+          onClick={() => navigate('/trips')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#D4AF37',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}>
+          <span style={{ fontSize: '1.5rem' }}>✈️</span>
+          Trips
+        </button>
+        <button
+          onClick={() => navigate('/photos')}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'white',
+            cursor: 'pointer',
+            fontSize: '0.8rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}>
+          <span style={{ fontSize: '1.5rem' }}>📸</span>
+          Photos
+        </button>
       </div>
     </div>
   )

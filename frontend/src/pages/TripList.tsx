@@ -49,8 +49,8 @@ export default function TripList() {
     const { error } = await supabase.from('trips').insert({
       user_id: user.id,
       name: newTrip.name,
-      start_date: newTrip.start_date,
-      end_date: newTrip.end_date,
+      start_date: newTrip.start_date || null,
+      end_date: newTrip.end_date || null,
       notes: newTrip.notes || null
     })
 
@@ -279,7 +279,6 @@ export default function TripList() {
                 type="date"
                 value={newTrip.start_date}
                 onChange={(e) => setNewTrip({ ...newTrip, start_date: e.target.value })}
-                required
                 style={{
                   flex: 1,
                   padding: '0.75rem',
@@ -294,7 +293,6 @@ export default function TripList() {
                 type="date"
                 value={newTrip.end_date}
                 onChange={(e) => setNewTrip({ ...newTrip, end_date: e.target.value })}
-                required
                 style={{
                   flex: 1,
                   padding: '0.75rem',
@@ -386,7 +384,7 @@ export default function TripList() {
                   {trip.name}
                 </div>
                 <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                  {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
+                  {trip.start_date ? new Date(trip.start_date).toLocaleDateString() : 'No dates'} - {trip.end_date ? new Date(trip.end_date).toLocaleDateString() : ''}
                 </div>
                 {trip.notes && (
                   <div style={{ fontSize: '0.9rem', marginTop: '0.5rem', opacity: 0.8 }}>
