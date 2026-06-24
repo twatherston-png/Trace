@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import type { Trip, Photo } from '../types'
+import type { Trip } from '../types'
 
 export default function TripList() {
   const [trips, setTrips] = useState<Trip[]>([])
