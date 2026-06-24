@@ -1,14 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Trip, Day, Activity, Photo, JournalEntry } from '../types'
+import type { Trip, Day, Photo, JournalEntry } from '../types'
 
 export default function TripOverview() {
   const { tripId } = useParams()
   const navigate = useNavigate()
   const [trip, setTrip] = useState<Trip | null>(null)
   const [days, setDays] = useState<Day[]>([])
-  const [activities, setActivities] = useState<Activity[]>([])
   const [photos, setPhotos] = useState<Photo[]>([])
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [showJournalForm, setShowJournalForm] = useState(false)
@@ -48,13 +47,6 @@ export default function TripOverview() {
       .order('date')
 
     if (daysData) setDays(daysData)
-
-    const { data: activitiesData } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('trip_id', tripId)
-
-    if (activitiesData) setActivities(activitiesData)
 
     const { data: photosData } = await supabase
       .from('photos')
