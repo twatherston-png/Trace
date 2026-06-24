@@ -1,52 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Make Photos Public - SQL</title>
+    <title>Fix Photos SQL</title>
     <style>
         body {
-            font-family: monospace;
+            font-family: Arial, sans-serif;
             background: #1a1a2e;
-            color: #eee;
+            color: white;
             padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #D4AF37;
+            text-align: center;
         }
         pre {
-            background: #0f0f1a;
+            background: #0f0f23;
             padding: 20px;
-            border-radius: 8px;
-            border: 2px solid #6B4D8E;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            border-radius: 10px;
+            text-align: left;
+            margin: 20px auto;
+            max-width: 600px;
         }
         button {
             background: #6B4D8E;
             color: white;
             border: none;
             padding: 15px 30px;
-            font-size: 16px;
-            border-radius: 8px;
+            font-size: 18px;
+            border-radius: 10px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 20px;
         }
-        button:hover {
+        button:active {
             background: #8B6DB0;
         }
         .success {
             color: #4CAF50;
-            font-weight: bold;
             margin-top: 10px;
             display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Make Photos Public</h1>
-    <p>Copy this SQL and paste it into Supabase SQL Editor:</p>
+    <h1>Fix Photos SQL</h1>
+    <p>Click the button to copy, then paste into Supabase SQL Editor</p>
     
     <pre id="sql">UPDATE storage.buckets
 SET public = true
@@ -59,16 +53,15 @@ TO public
 USING (bucket_id = 'photos');</pre>
     
     <button onclick="copySQL()">Copy SQL</button>
-    <div class="success" id="success">✓ Copied to clipboard!</div>
+    <div class="success" id="success">✓ Copied!</div>
     
     <script>
         function copySQL() {
             const sql = document.getElementById('sql').innerText;
             navigator.clipboard.writeText(sql).then(() => {
-                const success = document.getElementById('success');
-                success.style.display = 'block';
+                document.getElementById('success').style.display = 'block';
                 setTimeout(() => {
-                    success.style.display = 'none';
+                    document.getElementById('success').style.display = 'none';
                 }, 3000);
             });
         }
