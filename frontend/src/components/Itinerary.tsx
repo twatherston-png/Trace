@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Day, Activity } from '../types'
+import ActionMenu from './ActionMenu'
 
 interface ItineraryProps {
   tripId: string
@@ -15,6 +16,27 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
   const [showAddActivity, setShowAddActivity] = useState<string | null>(null)
   const [newDay, setNewDay] = useState({ date: '', notes: '' })
   const [newActivity, setNewActivity] = useState<{
+    name: string
+    time: string
+    location: string
+    notes: string
+    activity_type: 'transport' | 'accommodation' | 'activity' | 'food'
+    transport_type: string
+    flight_number: string
+    booking_reference: string
+  }>({
+    name: '',
+    time: '',
+    location: '',
+    notes: '',
+    activity_type: 'activity',
+    transport_type: 'other',
+    flight_number: '',
+    booking_reference: ''
+  })
+
+  const [editingActivity, setEditingActivity] = useState<string | null>(null)
+  const [editActivityData, setEditActivityData] = useState<{
     name: string
     time: string
     location: string
@@ -89,6 +111,49 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
     if (!error) {
       setShowAddActivity(null)
       setNewActivity({
+        name: '',
+        time: '',
+        location: '',
+        notes: '',
+        activity_type: 'activity',
+        transport_type: 'other',
+        flight_number: '',
+        booking_reference: ''
+      })
+      loadData()
+    }
+  }
+
+  const handleEditActivity = (activity: Activity) => {
+    setEditingActivity(activity.id)
+    setEditActivityData({
+      name: activity.name,
+      time: activity.time || '',
+      location: activity.location || '',
+      notes: activity.notes || '',
+      activity_type: activity.activity_type as 'transport' | 'accommodation' | 'activity' | 'food' || 'activity',
+      transport_type: activity.transport_type || 'other',
+      flight_number: activity.flight_number || '',
+      booking_reference: activity.booking_reference || ''
+    })
+  }
+
+  const handleUpdateActivity = async (activityId: string, e: React.FormEvent) => {
+    e.preventDefault()
+    const { error } = await supabase.from('activities').update({
+      name: editActivityData.name,
+      time: editActivityData.time || null,
+      location: editActivityData.location || null,
+      notes: editActivityData.notes || null,
+      activity_type: editActivityData.activity_type,
+      transport_type: editActivityData.transport_type,
+      flight_number: editActivityData.flight_number || null,
+      booking_reference: editActivityData.booking_reference || null
+    }).eq('id', activityId)
+
+    if (!error) {
+      setEditingActivity(null)
+      setEditActivityData({
         name: '',
         time: '',
         location: '',
@@ -259,54 +324,257 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                       background: 'rgba(255, 255, 255, 0.05)',
                       borderRadius: '8px',
                       padding: '1rem',
-                      marginBottom: '0.5rem',
-                      display: 'flex',
-                      gap: '0.75rem',
-                      alignItems: 'flex-start'
+                      marginBottom: '0.5rem'
                     }}>
-                      <div style={{ fontSize: '1.5rem' }}>{getActivityIcon(activity.activity_type || 'activity')}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{activity.name}</div>
-                        {activity.time && (
-                          <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                            {activity.time}
+                      {editingActivity === activity.id ? (
+                        <form onSubmit={(e) => handleUpdateActivity(activity.id, e)}>
+                          {/* Activity Type Selector */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+                            {[
+                              { type: 'transport', icon: '🚗', label: 'Transport' },
+                              { type: 'accommodation', icon: '🏨', label: 'Accommodation' },
+                              { type: 'activity', icon: '🎯', label: 'Activity' },
+                              { type: 'food', icon: '🍽️', label: 'Food & Drink' }
+                            ].map(({ type, icon, label }) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => setEditActivityData({ ...editActivityData, activity_type: type as any })}
+                                style={{
+                                  padding: '0.75rem',
+                                  borderRadius: '8px',
+                                  border: editActivityData.activity_type === type ? '2px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.2)',
+                                  background: editActivityData.activity_type === type ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  fontSize: '0.9rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '0.5rem'
+                                }}
+                              >
+                                <span>{icon}</span>
+                                <span>{label}</span>
+                              </button>
+                            ))}
                           </div>
-                        )}
-                        {activity.location && (
-                          <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                            📍 {activity.location}
+
+                          <input
+                            type="text"
+                            placeholder={editActivityData.activity_type === 'transport' ? 'Transport Name' :
+                                        editActivityData.activity_type === 'accommodation' ? 'Accommodation Name' :
+                                        editActivityData.activity_type === 'food' ? 'Restaurant Name' : 'Activity Name'}
+                            value={editActivityData.name}
+                            onChange={(e) => setEditActivityData({ ...editActivityData, name: e.target.value })}
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              marginBottom: '0.75rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              color: 'white',
+                              fontSize: '1rem'
+                            }}
+                          />
+
+                          <input
+                            type="time"
+                            value={editActivityData.time}
+                            onChange={(e) => setEditActivityData({ ...editActivityData, time: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              marginBottom: '0.75rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              color: 'white',
+                              fontSize: '1rem'
+                            }}
+                          />
+
+                          <input
+                            type="text"
+                            placeholder="Location (optional)"
+                            value={editActivityData.location}
+                            onChange={(e) => setEditActivityData({ ...editActivityData, location: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              marginBottom: '0.75rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              color: 'white',
+                              fontSize: '1rem'
+                            }}
+                          />
+
+                          {editActivityData.activity_type === 'transport' && (
+                            <>
+                              <select
+                                value={editActivityData.transport_type}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, transport_type: e.target.value })}
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem',
+                                  marginBottom: '0.75rem',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  color: 'white',
+                                  fontSize: '1rem'
+                                }}
+                              >
+                                <option value="flight">✈️ Flight</option>
+                                <option value="train">🚂 Train</option>
+                                <option value="bus">🚌 Bus</option>
+                                <option value="car">🚗 Car</option>
+                                <option value="taxi">🚕 Taxi</option>
+                                <option value="other">Other</option>
+                              </select>
+
+                              {editActivityData.transport_type === 'flight' && (
+                                <input
+                                  type="text"
+                                  placeholder="Flight number (e.g., AA1234)"
+                                  value={editActivityData.flight_number}
+                                  onChange={(e) => setEditActivityData({ ...editActivityData, flight_number: e.target.value })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    marginBottom: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'white',
+                                    fontSize: '1rem'
+                                  }}
+                                />
+                              )}
+                            </>
+                          )}
+
+                          <input
+                            type="text"
+                            placeholder="Booking reference (optional)"
+                            value={editActivityData.booking_reference}
+                            onChange={(e) => setEditActivityData({ ...editActivityData, booking_reference: e.target.value })}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              marginBottom: '0.75rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              color: 'white',
+                              fontSize: '1rem'
+                            }}
+                          />
+
+                          <textarea
+                            placeholder="Notes (optional)"
+                            value={editActivityData.notes}
+                            onChange={(e) => setEditActivityData({ ...editActivityData, notes: e.target.value })}
+                            rows={2}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              marginBottom: '0.75rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              color: 'white',
+                              fontSize: '1rem',
+                              resize: 'none'
+                            }}
+                          />
+
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              type="submit"
+                              style={{
+                                flex: 1,
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                                color: '#2D1B4E',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                fontSize: '1rem'
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingActivity(null)}
+                              style={{
+                                flex: 1,
+                                padding: '0.75rem',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255, 255, 255, 0.3)',
+                                background: 'transparent',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: '1rem'
+                              }}
+                            >
+                              Cancel
+                            </button>
                           </div>
-                        )}
-                        {activity.flight_number && (
-                          <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                            ✈️ {activity.flight_number}
+                        </form>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                          <div style={{ fontSize: '1.5rem' }}>{getActivityIcon(activity.activity_type || 'activity')}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{activity.name}</div>
+                            {activity.activity_type === 'transport' && activity.transport_type && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                {activity.transport_type === 'flight' ? '✈️' :
+                                 activity.transport_type === 'train' ? '🚂' :
+                                 activity.transport_type === 'bus' ? '🚌' :
+                                 activity.transport_type === 'car' ? '🚗' :
+                                 activity.transport_type === 'taxi' ? '🚕' : '🚗'} {activity.transport_type.charAt(0).toUpperCase() + activity.transport_type.slice(1)}
+                              </div>
+                            )}
+                            {activity.time && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                🕐 {activity.time}
+                              </div>
+                            )}
+                            {activity.location && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                📍 {activity.location}
+                              </div>
+                            )}
+                            {activity.flight_number && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                ✈️ {activity.flight_number}
+                              </div>
+                            )}
+                            {activity.booking_reference && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                🎫 {activity.booking_reference}
+                              </div>
+                            )}
+                            {activity.notes && (
+                              <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '0.5rem' }}>
+                                {activity.notes}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {activity.booking_reference && (
-                          <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                            🎫 {activity.booking_reference}
-                          </div>
-                        )}
-                        {activity.notes && (
-                          <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '0.5rem' }}>
-                            {activity.notes}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleDeleteActivity(activity.id)}
-                        style={{
-                          padding: '0.3rem 0.6rem',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: 'rgba(244, 67, 54, 0.2)',
-                          color: '#f44336',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem'
-                        }}
-                      >
-                        ×
-                      </button>
+                          <ActionMenu actions={[
+                            { label: '✏️ Edit', onClick: () => handleEditActivity(activity) },
+                            { label: '🗑️ Delete', onClick: () => handleDeleteActivity(activity.id), danger: true }
+                          ]}
+                        />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -372,7 +640,9 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
 
                   <input
                     type="text"
-                    placeholder="Activity name (e.g., Flight to Lima)"
+                    placeholder={newActivity.activity_type === 'transport' ? 'Transport Name' :
+                                newActivity.activity_type === 'accommodation' ? 'Accommodation Name' :
+                                newActivity.activity_type === 'food' ? 'Restaurant Name' : 'Activity Name'}
                     value={newActivity.name}
                     onChange={(e) => setNewActivity({ ...newActivity, name: e.target.value })}
                     required
