@@ -57,6 +57,9 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
     booking_reference: ''
   })
 
+  const [editingDayNotes, setEditingDayNotes] = useState<string | null>(null)
+  const [dayNotesText, setDayNotesText] = useState('')
+
   useEffect(() => {
     loadData()
   }, [tripId])
@@ -176,6 +179,18 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
         flight_number: '',
         booking_reference: ''
       })
+      loadData()
+    }
+  }
+
+  const handleUpdateDayNotes = async (dayId: string) => {
+    const { error } = await supabase.from('days').update({
+      notes: dayNotesText || null
+    }).eq('id', dayId)
+
+    if (!error) {
+      setEditingDayNotes(null)
+      setDayNotesText('')
       loadData()
     }
   }
@@ -367,6 +382,7 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>
                     <ActionMenu actions={[
+                      { label: '➕ Add Activity', onClick: () => setShowAddActivity(day.id) },
                       { label: '🗑️ Delete Day', onClick: () => handleDeleteDay(day.id), danger: true }
                     ]} />
                   </div>
@@ -638,23 +654,90 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                       </div>
                     )}
 
-                    {/* Add Activity Button */}
-                    <button
-                      onClick={() => setShowAddActivity(showAddActivity === day.id ? null : day.id)}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
+                    {/* Notes Section */}
+                    {editingDayNotes === day.id ? (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
                         borderRadius: '8px',
-                        border: '1px dashed rgba(255, 255, 255, 0.3)',
-                        background: 'transparent',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        opacity: 0.7
-                      }}
-                    >
-                      {showAddActivity === day.id ? 'Cancel' : '+ Add Activity'}
-                    </button>
+                        padding: '1rem',
+                        marginBottom: '1rem'
+                      }}>
+                        <textarea
+                          value={dayNotesText}
+                          onChange={(e) => setDayNotesText(e.target.value)}
+                          placeholder="Add notes like 'If we have time, travel to Miraflores, go shoe shopping...'"
+                          rows={3}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginBottom: '0.5rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '0.9rem',
+                            resize: 'vertical'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => handleUpdateDayNotes(day.id)}
+                            style={{
+                              flex: 1,
+                              padding: '0.5rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                              color: '#2D1B4E',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingDayNotes(null)
+                              setDayNotesText('')
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '0.5rem',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              background: 'transparent',
+                              color: 'white',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        marginBottom: '1rem',
+                        cursor: 'pointer'
+                      }} onClick={() => {
+                        setEditingDayNotes(day.id)
+                        setDayNotesText(day.notes || '')
+                      }}>
+                        {day.notes ? (
+                          <div style={{ fontSize: '0.9rem', opacity: 0.9, whiteSpace: 'pre-wrap' }}>
+                            {day.notes}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.9rem', opacity: 0.5, fontStyle: 'italic' }}>
+                            + Add Notes
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Add Activity Form */}
                     {showAddActivity === day.id && (
