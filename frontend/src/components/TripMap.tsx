@@ -106,12 +106,14 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
       for (const day of days) {
         if (!day.location) continue
 
-        // Check if there's a pinned location for this day
-        const pinnedForDay = pinnedLocations.find(p => p.day_id === day.id)
+        // Check if there's a pinned location with matching name
+        const pinnedForLocation = pinnedLocations.find(
+          p => p.name.toLowerCase() === day.location!.toLowerCase()
+        )
         
-        if (pinnedForDay) {
+        if (pinnedForLocation) {
           // Use pinned location coordinates
-          results.push({ ...day, lng: pinnedForDay.longitude, lat: pinnedForDay.latitude, name: pinnedForDay.name })
+          results.push({ ...day, lng: pinnedForLocation.longitude, lat: pinnedForLocation.latitude, name: pinnedForLocation.name })
         } else {
           // Otherwise geocode the location text
           try {
