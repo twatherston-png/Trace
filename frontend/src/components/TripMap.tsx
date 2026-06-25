@@ -357,52 +357,6 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
       })
     }
 
-    // Add pinned locations (always visible in both views)
-    pinnedLocations.forEach(pin => {
-      const el = document.createElement('div')
-      el.className = 'marker'
-      el.style.width = '28px'
-      el.style.height = '28px'
-      el.style.borderRadius = '50%'
-      el.style.background = '#E74C3C'
-      el.style.border = '3px solid white'
-      el.style.cursor = 'pointer'
-      el.style.display = 'flex'
-      el.style.alignItems = 'center'
-      el.style.justifyContent = 'center'
-      el.style.fontSize = '14px'
-      el.innerHTML = '📌'
-
-      const day = days.find(d => d.id === pin.day_id)
-      const dateStr = day ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
-
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([pin.longitude, pin.latitude])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 25 }).setHTML(`
-            <div style="color: black; padding: 0.5rem;">
-              <strong>📌 ${pin.name}</strong><br/>
-              ${dateStr ? `📅 ${dateStr}<br/>` : ''}
-              ${pin.notes ? `<em>${pin.notes}</em><br/>` : ''}
-              <button onclick="window.__deletePin('${pin.id}')" style="
-                margin-top: 0.5rem;
-                padding: 0.25rem 0.5rem;
-                background: #f44336;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.8rem;
-              ">Delete Pin</button>
-            </div>
-          `)
-        )
-        .addTo(map.current!)
-
-      markers.current.push(marker)
-      allBounds.extend([pin.longitude, pin.latitude])
-    })
-
     // Fit bounds if we have any markers
     if (!allBounds.isEmpty()) {
       map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 })
