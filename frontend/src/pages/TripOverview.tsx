@@ -15,6 +15,7 @@ export default function TripOverview() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [activities, setActivities] = useState<any[]>([])
+  const [days, setDays] = useState<any[]>([])
   const [showJournalForm, setShowJournalForm] = useState(false)
   const [newJournal, setNewJournal] = useState({ date: '', location: '', content: '' })
   const [uploading, setUploading] = useState(false)
@@ -66,6 +67,13 @@ export default function TripOverview() {
       .eq('trip_id', tripId)
 
     if (activitiesData) setActivities(activitiesData)
+
+    const { data: daysData } = await supabase
+      .from('days')
+      .select('*')
+      .eq('trip_id', tripId)
+
+    if (daysData) setDays(daysData)
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,7 +338,7 @@ export default function TripOverview() {
         {/* Map */}
         {activities.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
-            <TripMap activities={activities} />
+            <TripMap activities={activities} days={days} />
           </div>
         )}
 

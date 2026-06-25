@@ -9,16 +9,30 @@ interface Activity {
   activity_type?: string
   time?: string
   notes?: string
+  day_id?: string
+}
+
+interface Day {
+  id: string
+  date: string
 }
 
 interface TripMapProps {
   activities: Activity[]
+  days: Day[]
 }
 
-export default function TripMap({ activities }: TripMapProps) {
+export default function TripMap({ activities, days }: TripMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markers = useRef<mapboxgl.Marker[]>([])
+
+  const getDateForActivity = (activity: Activity): string => {
+    if (!activity.day_id || !days.length) return ''
+    const day = days.find(d => d.id === activity.day_id)
+    if (!day || !day.date) return ''
+    return new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -106,7 +120,7 @@ export default function TripMap({ activities }: TripMapProps) {
             new mapboxgl.Popup({ offset: 25 }).setHTML(`
               <div style="color: black; padding: 0.5rem;">
                 <strong>${activity.name}</strong><br/>
-                ${activity.time ? `🕐 ${activity.time}<br/>` : ''}
+                ${getDateForActivity(activity) ? `📅 ${getDateForActivity(activity)}<br/>` : ''}
                 ${activity.location ? `📍 ${activity.location}` : ''}
               </div>
             `)
@@ -123,7 +137,7 @@ export default function TripMap({ activities }: TripMapProps) {
     }
 
     addMarkers()
-  }, [activities])
+  }, [activities, days])
 
   const getActivityColor = (type?: string) => {
     switch (type) {
