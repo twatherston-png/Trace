@@ -328,20 +328,6 @@ export default function TripOverview() {
           )}
         </div>
 
-        {/* Itinerary */}
-        <Itinerary 
-          tripId={tripId!} 
-          tripStartDate={trip.start_date} 
-          tripEndDate={trip.end_date} 
-        />
-
-        {/* Map */}
-        {activities.length > 0 && (
-          <div style={{ marginBottom: '1.5rem' }}>
-            <TripMap activities={activities} days={days} />
-          </div>
-        )}
-
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
           <input
@@ -483,50 +469,6 @@ export default function TripOverview() {
           </form>
         )}
 
-        {/* Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1rem',
-          marginBottom: '2rem'
-        }}>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#D4AF37' }}>
-              {trip.start_date && trip.end_date
-                ? Math.max(1, Math.ceil((new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
-                : 0}
-            </div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Days</div>
-          </div>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#D4AF37' }}>
-              {photos.length}
-            </div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Photos</div>
-          </div>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1rem',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#D4AF37' }}>
-              {journalEntries.length}
-            </div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Journal</div>
-          </div>
-        </div>
-
         {/* Photos */}
         <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Photos</h2>
@@ -594,8 +536,15 @@ export default function TripOverview() {
           )}
         </div>
 
+        {/* Itinerary */}
+        <Itinerary 
+          tripId={tripId!} 
+          tripStartDate={trip.start_date} 
+          tripEndDate={trip.end_date} 
+        />
+
         {/* Journal Entries */}
-        <div>
+        <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Journal</h2>
           {journalEntries.length === 0 ? (
             <div style={{
@@ -641,6 +590,13 @@ export default function TripOverview() {
             </div>
           )}
         </div>
+
+        {/* Map */}
+        {activities.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <TripMap activities={activities} days={days} />
+          </div>
+        )}
       </div>
 
       {/* Photo Modal */}
