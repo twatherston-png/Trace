@@ -827,9 +827,14 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                         setDayIdeasText((day as any).ideas || '')
                       }}>
                         {(day as any).ideas ? (
-                          <div style={{ fontSize: '0.9rem', opacity: 0.9, whiteSpace: 'pre-wrap' }}>
-                            {(day as any).ideas}
-                          </div>
+                          <>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold', opacity: 0.6, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              💡 Ideas
+                            </div>
+                            <div style={{ fontSize: '0.9rem', opacity: 0.9, whiteSpace: 'pre-wrap' }}>
+                              {(day as any).ideas}
+                            </div>
+                          </>
                         ) : (
                           <div style={{ fontSize: '0.9rem', opacity: 0.5, fontStyle: 'italic' }}>
                             💡 Ideas for this day...
