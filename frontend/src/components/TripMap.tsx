@@ -162,7 +162,12 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
 
   // Save pinned location
   const handleSavePin = async () => {
-    if (!pendingPin || !pinName.trim()) return
+    if (!pendingPin || !pinName.trim()) {
+      console.log('Missing data:', { pendingPin, pinName })
+      return
+    }
+
+    console.log('Saving pin:', { tripId, pinName, pendingPin, pinDayId, pinNotes })
 
     const { error } = await supabase.from('pinned_locations').insert({
       trip_id: tripId,
@@ -173,22 +178,28 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
       notes: pinNotes || null
     })
 
-    if (!error) {
-      // Reload pins
-      const { data: newData } = await supabase
-        .from('pinned_locations')
-        .select('*')
-        .eq('trip_id', tripId)
-        .order('created_at')
-      if (newData) setPinnedLocations(newData)
-
-      // Reset form
-      setShowPinModal(false)
-      setPendingPin(null)
-      setPinName('')
-      setPinDayId('')
-      setPinNotes('')
+    if (error) {
+      console.error('Error saving pin:', error)
+      alert(`Error saving pin: ${error.message}`)
+      return
     }
+
+    console.log('Pin saved successfully')
+
+    // Reload pins
+    const { data: newData } = await supabase
+      .from('pinned_locations')
+      .select('*')
+      .eq('trip_id', tripId)
+      .order('created_at')
+    if (newData) setPinnedLocations(newData)
+
+    // Reset form
+    setShowPinModal(false)
+    setPendingPin(null)
+    setPinName('')
+    setPinDayId('')
+    setPinNotes('')
   }
 
   // Delete pinned location
