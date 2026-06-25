@@ -22,6 +22,7 @@ export interface Day {
   trip_id: string
   date: string
   notes?: string
+  created_at: string
 }
 
 export interface Activity {
@@ -33,7 +34,9 @@ export interface Activity {
   location?: string
   notes?: string
   booking_reference?: string
-  document_id?: string
+  activity_type?: 'transport' | 'accommodation' | 'activity' | 'food'
+  transport_type?: 'flight' | 'train' | 'bus' | 'car' | 'taxi' | 'other'
+  flight_number?: string
   created_at: string
 }
 

@@ -5,6 +5,7 @@ import type { Trip, Photo, JournalEntry } from '../types'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
+import Itinerary from '../components/Itinerary'
 
 export default function TripOverview() {
   const { tripId } = useParams()
@@ -304,13 +305,8 @@ export default function TripOverview() {
               }}
             />
           )}
-          {(trip.start_date || trip.end_date) && (
-            <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-              {trip.start_date ? new Date(trip.start_date).toLocaleDateString() : 'No start date'} - {trip.end_date ? new Date(trip.end_date).toLocaleDateString() : 'No end date'}
-            </div>
-          )}
           {trip.notes && <div style={{ opacity: 0.8 }}>{trip.notes}</div>}
-          {!trip.start_date && !trip.end_date && !trip.notes && !trip.cover_photo_url && (
+          {!trip.notes && !trip.cover_photo_url && (
             <div style={{ opacity: 0.5, fontStyle: 'italic' }}>No trip details yet</div>
           )}
         </div>
@@ -557,6 +553,13 @@ export default function TripOverview() {
             </div>
           )}
         </div>
+
+        {/* Itinerary */}
+        <Itinerary 
+          tripId={tripId!} 
+          tripStartDate={trip.start_date} 
+          tripEndDate={trip.end_date} 
+        />
 
         {/* Journal Entries */}
         <div>
