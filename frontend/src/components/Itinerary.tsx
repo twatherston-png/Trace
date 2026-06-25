@@ -59,6 +59,8 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
 
   const [editingDayNotes, setEditingDayNotes] = useState<string | null>(null)
   const [dayNotesText, setDayNotesText] = useState('')
+  const [editingDayIdeas, setEditingDayIdeas] = useState<string | null>(null)
+  const [dayIdeasText, setDayIdeasText] = useState('')
 
   useEffect(() => {
     loadData()
@@ -191,6 +193,18 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
     if (!error) {
       setEditingDayNotes(null)
       setDayNotesText('')
+      loadData()
+    }
+  }
+
+  const handleUpdateDayIdeas = async (dayId: string) => {
+    const { error } = await supabase.from('days').update({
+      ideas: dayIdeasText || null
+    }).eq('id', dayId)
+
+    if (!error) {
+      setEditingDayIdeas(null)
+      setDayIdeasText('')
       loadData()
     }
   }
@@ -734,6 +748,91 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                         ) : (
                           <div style={{ fontSize: '0.9rem', opacity: 0.5, fontStyle: 'italic' }}>
                             + Add Notes
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Ideas Section */}
+                    {editingDayIdeas === day.id ? (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        marginBottom: '1rem'
+                      }}>
+                        <textarea
+                          value={dayIdeasText}
+                          onChange={(e) => setDayIdeasText(e.target.value)}
+                          placeholder="Ideas for this day..."
+                          rows={3}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginBottom: '0.5rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '0.9rem',
+                            resize: 'vertical'
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => handleUpdateDayIdeas(day.id)}
+                            style={{
+                              flex: 1,
+                              padding: '0.5rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                              color: '#2D1B4E',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingDayIdeas(null)
+                              setDayIdeasText('')
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '0.5rem',
+                              borderRadius: '8px',
+                              border: '1px solid rgba(255, 255, 255, 0.3)',
+                              background: 'transparent',
+                              color: 'white',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        marginBottom: '1rem',
+                        cursor: 'pointer'
+                      }} onClick={() => {
+                        setEditingDayIdeas(day.id)
+                        setDayIdeasText((day as any).ideas || '')
+                      }}>
+                        {(day as any).ideas ? (
+                          <div style={{ fontSize: '0.9rem', opacity: 0.9, whiteSpace: 'pre-wrap' }}>
+                            {(day as any).ideas}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.9rem', opacity: 0.5, fontStyle: 'italic' }}>
+                            💡 Ideas for this day...
                           </div>
                         )}
                       </div>

@@ -22,6 +22,7 @@ export interface Day {
   trip_id: string
   date: string
   notes?: string
+  ideas?: string
   created_at: string
 }
 
