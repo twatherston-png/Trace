@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Photo } from '../types'
 import TopBar from '../components/TopBar'
@@ -16,6 +16,8 @@ export default function PhotosGallery() {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTriggered = useRef(false)
   
   // Edit form state
   const [editDate, setEditDate] = useState('')
@@ -213,6 +215,36 @@ export default function PhotosGallery() {
     }
   }
 
+  const handleLongPressStart = (photoId: string) => {
+    longPressTriggered.current = false
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true
+      if (!selectMode) {
+        setSelectMode(true)
+      }
+      togglePhotoSelection(photoId)
+    }, 500)
+  }
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handlePhotoClick = (photo: Photo) => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false
+      return
+    }
+    if (selectMode) {
+      togglePhotoSelection(photo.id)
+    } else {
+      setSelectedPhoto(photo)
+    }
+  }
+
   const sortedPhotos = [...photos].sort((a, b) => {
     if (sortBy === 'date') {
       return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
@@ -387,17 +419,16 @@ export default function PhotosGallery() {
                         background: 'rgba(255, 255, 255, 0.1)',
                         border: selectedPhotos.has(photo.id) ? '3px solid #D4AF37' : 'none'
                       }}
+                      onMouseDown={() => handleLongPressStart(photo.id)}
+                      onMouseUp={handleLongPressEnd}
+                      onMouseLeave={handleLongPressEnd}
+                      onTouchStart={() => handleLongPressStart(photo.id)}
+                      onTouchEnd={handleLongPressEnd}
                     >
                       <img
                         src={photo.url}
                         alt={photo.caption || 'Photo'}
-                        onClick={() => {
-                          if (selectMode) {
-                            togglePhotoSelection(photo.id)
-                          } else {
-                            setSelectedPhoto(photo)
-                          }
-                        }}
+                        onClick={() => handlePhotoClick(photo)}
                         style={{
                           width: '100%',
                           height: '100%',
