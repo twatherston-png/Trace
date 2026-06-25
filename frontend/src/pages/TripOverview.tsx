@@ -6,6 +6,7 @@ import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
 import Itinerary from '../components/Itinerary'
+import TripMap from '../components/TripMap'
 
 export default function TripOverview() {
   const { tripId } = useParams()
@@ -13,6 +14,7 @@ export default function TripOverview() {
   const [trip, setTrip] = useState<Trip | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
+  const [activities, setActivities] = useState<any[]>([])
   const [showJournalForm, setShowJournalForm] = useState(false)
   const [newJournal, setNewJournal] = useState({ date: '', location: '', content: '' })
   const [uploading, setUploading] = useState(false)
@@ -57,6 +59,13 @@ export default function TripOverview() {
       .order('date')
 
     if (journalData) setJournalEntries(journalData)
+
+    const { data: activitiesData } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('trip_id', tripId)
+
+    if (activitiesData) setActivities(activitiesData)
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,6 +319,13 @@ export default function TripOverview() {
             <div style={{ opacity: 0.5, fontStyle: 'italic' }}>No trip details yet</div>
           )}
         </div>
+
+        {/* Map */}
+        {activities.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <TripMap activities={activities} />
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
