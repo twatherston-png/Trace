@@ -542,45 +542,54 @@ export default function TripOverview() {
             </div>
           ) : (
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-              gap: '0.5rem'
+              display: 'flex',
+              overflowX: 'auto',
+              gap: '0.5rem',
+              paddingBottom: '0.5rem'
             }}>
-              {photos.map(photo => (
-                <div
-                  key={photo.id}
-                  style={{
-                    position: 'relative',
-                    aspectRatio: '1',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    background: 'rgba(255, 255, 255, 0.1)'
-                  }}
-                >
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || 'Photo'}
-                    onClick={() => setSelectedPhoto(photo)}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      cursor: 'pointer'
-                    }}
-                    onError={(e) => {
-                      console.error('Image failed to load:', photo.url)
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                  <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
-                    <ActionMenu actions={[
-                      { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
-                      { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
-                    ]}
-                  />
+              {Array.from({ length: Math.ceil(photos.length / 2) }, (_, i) => {
+                const columnPhotos = photos.slice(i * 2, i * 2 + 2)
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+                    {columnPhotos.map(photo => (
+                      <div
+                        key={photo.id}
+                        style={{
+                          position: 'relative',
+                          width: '120px',
+                          height: '120px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          background: 'rgba(255, 255, 255, 0.1)'
+                        }}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.caption || 'Photo'}
+                          onClick={() => setSelectedPhoto(photo)}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            cursor: 'pointer'
+                          }}
+                          onError={(e) => {
+                            console.error('Image failed to load:', photo.url)
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                        <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                          <ActionMenu actions={[
+                            { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
+                            { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
+                          ]}
+                        />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
