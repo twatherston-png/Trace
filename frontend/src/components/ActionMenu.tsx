@@ -12,11 +12,14 @@ interface ActionMenuProps {
 
 export default function ActionMenu({ actions }: ActionMenuProps) {
   const [open, setOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
     }
@@ -24,10 +27,22 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
+  const handleToggle = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setMenuPos({
+        top: rect.bottom + window.scrollY,
+        right: window.innerWidth - rect.right
+      })
+    }
+    setOpen(!open)
+  }
+
   return (
     <div ref={menuRef} style={{ position: 'relative' }}>
       <button
-        onClick={() => setOpen(!open)}
+        ref={buttonRef}
+        onClick={handleToggle}
         style={{
           background: 'transparent',
           border: 'none',
@@ -40,18 +55,18 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
       >
         ⋮
       </button>
-      {open && (
+      {open && menuPos && (
         <div style={{
-          position: 'absolute',
-          top: '100%',
-          right: 0,
+          position: 'fixed',
+          top: menuPos.top,
+          right: menuPos.right,
           background: '#1a1a1a',
           border: '1px solid rgba(255, 255, 255, 0.15)',
           borderRadius: '8px',
           overflow: 'hidden',
           minWidth: '160px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
-          zIndex: 200
+          zIndex: 9999
         }}>
           {actions.map((action, i) => (
             <button
