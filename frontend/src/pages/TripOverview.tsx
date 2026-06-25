@@ -320,6 +320,13 @@ export default function TripOverview() {
           )}
         </div>
 
+        {/* Itinerary */}
+        <Itinerary 
+          tripId={tripId!} 
+          tripStartDate={trip.start_date} 
+          tripEndDate={trip.end_date} 
+        />
+
         {/* Map */}
         {activities.length > 0 && (
           <div style={{ marginBottom: '1.5rem' }}>
@@ -569,13 +576,6 @@ export default function TripOverview() {
             </div>
           )}
         </div>
-
-        {/* Itinerary */}
-        <Itinerary 
-          tripId={tripId!} 
-          tripStartDate={trip.start_date} 
-          tripEndDate={trip.end_date} 
-        />
 
         {/* Journal Entries */}
         <div>
