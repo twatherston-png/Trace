@@ -23,6 +23,7 @@ export interface Day {
   date: string
   notes?: string
   ideas?: string
+  location?: string
   created_at: string
 }
 

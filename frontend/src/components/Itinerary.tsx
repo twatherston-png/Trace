@@ -15,7 +15,7 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
   const [showAddDay, setShowAddDay] = useState(false)
   const [showAddActivity, setShowAddActivity] = useState<string | null>(null)
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
-  const [newDay, setNewDay] = useState({ date: '', notes: '' })
+  const [newDay, setNewDay] = useState({ date: '', notes: '', location: '' })
   const [newActivity, setNewActivity] = useState<{
     name: string
     time: string
@@ -101,12 +101,13 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
     const { error } = await supabase.from('days').insert({
       trip_id: tripId,
       date: newDay.date,
-      notes: newDay.notes || null
+      notes: newDay.notes || null,
+      location: newDay.location || null
     })
 
     if (!error) {
       setShowAddDay(false)
-      setNewDay({ date: '', notes: '' })
+      setNewDay({ date: '', notes: '', location: '' })
       loadData()
     }
   }
@@ -300,6 +301,22 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
               fontSize: '1rem'
             }}
           />
+          <input
+            type="text"
+            placeholder="Location (e.g., Lima, Cusco)"
+            value={newDay.location}
+            onChange={(e) => setNewDay({ ...newDay, location: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              marginBottom: '1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: 'white',
+              fontSize: '1rem'
+            }}
+          />
           <textarea
             placeholder="Notes (optional)"
             value={newDay.notes}
@@ -384,6 +401,9 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                       <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
                         {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </span>
+                      {day.location && (
+                        <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>📍 {day.location}</span>
+                      )}
                     </div>
                     {!isExpanded && (
                       <div style={{ fontSize: '0.85rem', opacity: 0.6, marginLeft: '1.5rem' }}>
