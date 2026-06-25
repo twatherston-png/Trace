@@ -7,6 +7,7 @@ import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
 import Itinerary from '../components/Itinerary'
 import TripMap from '../components/TripMap'
+import EXIF from 'exif-js'
 
 export default function TripOverview() {
   const { tripId } = useParams()
@@ -23,6 +24,11 @@ export default function TripOverview() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [showMetadataModal, setShowMetadataModal] = useState(false)
+  const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([])
+  const [extractedExif, setExtractedExif] = useState<{ date?: string; latitude?: number; longitude?: number }>({})
+  const [bulkDate, setBulkDate] = useState('')
+  const [bulkLocation, setBulkLocation] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -93,12 +99,19 @@ export default function TripOverview() {
 
     let successCount = 0
     let errorCount = 0
+    const uploadedPhotoIds: string[] = []
+    let extractedExif: { date?: string; latitude?: number; longitude?: number } = {}
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       const fileName = `${Date.now()}-${file.name}`
       
       try {
+        // Extract EXIF data from first photo
+        if (i === 0) {
+          extractedExif = await extractExifData(file)
+        }
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('photos')
           .upload(fileName, file)
@@ -114,17 +127,18 @@ export default function TripOverview() {
             .from('photos')
             .getPublicUrl(fileName)
 
-          const { error: insertError } = await supabase.from('photos').insert({
+          const { data: insertedData, error: insertError } = await supabase.from('photos').insert({
             trip_id: tripId,
             url: publicUrl,
             caption: file.name
-          })
+          }).select()
 
           if (insertError) {
             console.error('Insert error:', insertError)
             errorCount++
-          } else {
+          } else if (insertedData && insertedData.length > 0) {
             successCount++
+            uploadedPhotoIds.push(insertedData[0].id)
           }
         }
       } catch (err) {
@@ -139,12 +153,85 @@ export default function TripOverview() {
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (successCount > 0) {
-      setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''} successfully!` })
+      // Show metadata modal
+      setUploadedPhotoIds(uploadedPhotoIds)
+      setExtractedExif(extractedExif)
+      setShowMetadataModal(true)
       loadTripData()
     }
     if (errorCount > 0) {
       setNotification({ type: 'error', message: `Failed to upload ${errorCount} photo${errorCount > 1 ? 's' : ''}` })
     }
+  }
+
+  const extractExifData = async (file: File): Promise<{ date?: string; latitude?: number; longitude?: number }> => {
+    return new Promise((resolve) => {
+      EXIF.getData(file as any, function(this: any) {
+        const result: { date?: string; latitude?: number; longitude?: number } = {}
+        
+        // Extract date
+        const exifDate = EXIF.getTag(this, 'DateTimeOriginal')
+        if (exifDate) {
+          // Format: "2024:01:15 10:30:00"
+          const match = exifDate.match(/(\d{4}):(\d{2}):(\d{2})/)
+          if (match) {
+            result.date = `${match[1]}-${match[2]}-${match[3]}`
+          }
+        }
+        
+        // Extract GPS coordinates
+        const latitude = EXIF.getTag(this, 'GPSLatitude')
+        const longitude = EXIF.getTag(this, 'GPSLongitude')
+        const latRef = EXIF.getTag(this, 'GPSLatitudeRef')
+        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef')
+        
+        if (latitude && longitude) {
+          result.latitude = convertDMSToDD(latitude, latRef)
+          result.longitude = convertDMSToDD(longitude, lonRef)
+        }
+        
+        resolve(result)
+      })
+    })
+  }
+
+  const convertDMSToDD = (dms: number[], ref: string) => {
+    const [degrees, minutes, seconds] = dms
+    let dd = degrees + minutes / 60 + seconds / 3600
+    if (ref === 'S' || ref === 'W') dd = -dd
+    return dd
+  }
+
+  const handleApplyMetadata = async (option: 'exif' | 'bulk' | 'blank', bulkDate?: string, bulkLocation?: string) => {
+    if (!uploadedPhotoIds.length) return
+
+    if (option === 'exif' && extractedExif.date) {
+      await supabase
+        .from('photos')
+        .update({
+          taken_at: extractedExif.date,
+          latitude: extractedExif.latitude,
+          longitude: extractedExif.longitude
+        })
+        .in('id', uploadedPhotoIds)
+    } else if (option === 'bulk' && (bulkDate || bulkLocation)) {
+      const updates: any = {}
+      if (bulkDate) updates.taken_at = bulkDate
+      if (bulkLocation) updates.location = bulkLocation
+      
+      await supabase
+        .from('photos')
+        .update(updates)
+        .in('id', uploadedPhotoIds)
+    }
+
+    setShowMetadataModal(false)
+    setUploadedPhotoIds([])
+    setExtractedExif({})
+    setBulkDate('')
+    setBulkLocation('')
+    setNotification({ type: 'success', message: 'Metadata applied successfully!' })
+    loadTripData()
   }
 
   const handleAddJournal = async (e: React.FormEvent) => {
@@ -634,6 +721,136 @@ export default function TripOverview() {
               borderRadius: '8px'
             }}
           />
+        </div>
+      )}
+
+      {showMetadataModal && (
+        <div
+          onClick={() => {
+            setShowMetadataModal(false)
+            setUploadedPhotoIds([])
+            setExtractedExif({})
+            setBulkDate('')
+            setBulkLocation('')
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2001,
+            padding: '1rem'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#1a1a1a',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <h3 style={{ color: 'white', marginBottom: '1rem' }}>Apply Metadata to {uploadedPhotoIds.length} Photo{uploadedPhotoIds.length !== 1 ? 's' : ''}</h3>
+            
+            {extractedExif.date && (
+              <button
+                onClick={() => handleApplyMetadata('exif')}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  marginBottom: '1rem',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>📷 Use EXIF Data</div>
+                <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                  Date: {extractedExif.date}
+                  {extractedExif.latitude && extractedExif.longitude && ` • Location: ${extractedExif.latitude.toFixed(4)}, ${extractedExif.longitude.toFixed(4)}`}
+                </div>
+              </button>
+            )}
+
+            <button
+              onClick={() => handleApplyMetadata('bulk', bulkDate, bulkLocation)}
+              disabled={!bulkDate && !bulkLocation}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: 'white',
+                cursor: (!bulkDate && !bulkLocation) ? 'not-allowed' : 'pointer',
+                marginBottom: '1rem',
+                textAlign: 'left',
+                opacity: (!bulkDate && !bulkLocation) ? 0.5 : 1
+              }}
+            >
+              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>📝 Add Bulk Information</div>
+              <input
+                type="date"
+                value={bulkDate}
+                onChange={(e) => setBulkDate(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  color: 'white',
+                  marginBottom: '0.5rem'
+                }}
+              />
+              <input
+                type="text"
+                value={bulkLocation}
+                onChange={(e) => setBulkLocation(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Location (e.g., Lima, Peru)"
+                style={{
+                  width: '100%',
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  color: 'white'
+                }}
+              />
+            </button>
+
+            <button
+              onClick={() => handleApplyMetadata('blank')}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: 'white',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ fontWeight: 'bold' }}>⊘ Add as Blank</div>
+              <div style={{ fontSize: '0.9rem', opacity: 0.7, marginTop: '0.25rem' }}>
+                No metadata, just upload the photos
+              </div>
+            </button>
+          </div>
         </div>
       )}
 
