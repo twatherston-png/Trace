@@ -61,6 +61,12 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
   const [dayNotesText, setDayNotesText] = useState('')
   const [editingDayIdeas, setEditingDayIdeas] = useState<string | null>(null)
   const [dayIdeasText, setDayIdeasText] = useState('')
+  const [editingDay, setEditingDay] = useState<string | null>(null)
+  const [editDayData, setEditDayData] = useState<{ date: string; notes: string; location: string }>({
+    date: '',
+    notes: '',
+    location: ''
+  })
 
   useEffect(() => {
     loadData()
@@ -206,6 +212,29 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
     if (!error) {
       setEditingDayIdeas(null)
       setDayIdeasText('')
+      loadData()
+    }
+  }
+
+  const handleEditDay = (day: Day) => {
+    setEditingDay(day.id)
+    setEditDayData({
+      date: day.date,
+      notes: day.notes || '',
+      location: day.location || ''
+    })
+  }
+
+  const handleUpdateDay = async (dayId: string) => {
+    const { error } = await supabase.from('days').update({
+      date: editDayData.date,
+      notes: editDayData.notes || null,
+      location: editDayData.location || null
+    }).eq('id', dayId)
+
+    if (!error) {
+      setEditingDay(null)
+      setEditDayData({ date: '', notes: '', location: '' })
       loadData()
     }
   }
@@ -417,10 +446,107 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                   <div onClick={(e) => e.stopPropagation()}>
                     <ActionMenu actions={[
                       { label: '➕ Add Activity', onClick: () => setShowAddActivity(day.id) },
+                      { label: '✏️ Edit Day', onClick: () => handleEditDay(day) },
                       { label: '🗑️ Delete Day', onClick: () => handleDeleteDay(day.id), danger: true }
                     ]} />
                   </div>
                 </div>
+
+                {/* Edit Day Form */}
+                {editingDay === day.id && (
+                  <form onSubmit={(e) => { e.preventDefault(); handleUpdateDay(day.id); }} style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <input
+                      type="date"
+                      value={editDayData.date}
+                      onChange={(e) => setEditDayData({ ...editDayData, date: e.target.value })}
+                      required
+                      min={tripStartDate}
+                      max={tripEndDate}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        marginBottom: '0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        fontSize: '1rem'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Location (e.g., Lima, Cusco)"
+                      value={editDayData.location}
+                      onChange={(e) => setEditDayData({ ...editDayData, location: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        marginBottom: '0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        fontSize: '1rem'
+                      }}
+                    />
+                    <textarea
+                      placeholder="Notes (optional)"
+                      value={editDayData.notes}
+                      onChange={(e) => setEditDayData({ ...editDayData, notes: e.target.value })}
+                      rows={2}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        marginBottom: '0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        fontSize: '1rem',
+                        resize: 'none'
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="submit"
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                          color: '#2D1B4E',
+                          fontWeight: 'bold',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingDay(null)}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          background: 'transparent',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 {/* Expanded Content */}
                 {isExpanded && (
