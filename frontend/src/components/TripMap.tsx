@@ -108,10 +108,15 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
       for (const day of days) {
         if (!day.location) continue
 
-        // Check if there's a pinned location with matching name
-        const pinnedForLocation = pinnedLocations.find(
-          p => p.name.toLowerCase() === day.location!.toLowerCase()
-        )
+        // Check if there's a pinned location with matching name (flexible matching)
+        const pinnedForLocation = pinnedLocations.find(p => {
+          const pinName = p.name.toLowerCase().trim()
+          const dayLocation = day.location!.toLowerCase().trim()
+          // Exact match or one contains the other
+          return pinName === dayLocation || 
+                 dayLocation.includes(pinName) || 
+                 pinName.includes(dayLocation)
+        })
 
         console.log(`Day ${day.id} location "${day.location}":`, { pinnedForLocation })
         
