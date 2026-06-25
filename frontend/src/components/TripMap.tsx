@@ -103,6 +103,8 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
     const geocodeDays = async () => {
       const results: (Day & GeocodedLocation)[] = []
 
+      console.log('Geocoding days with pinnedLocations:', pinnedLocations)
+
       for (const day of days) {
         if (!day.location) continue
 
@@ -110,9 +112,12 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
         const pinnedForLocation = pinnedLocations.find(
           p => p.name.toLowerCase() === day.location!.toLowerCase()
         )
+
+        console.log(`Day ${day.id} location "${day.location}":`, { pinnedForLocation })
         
         if (pinnedForLocation) {
           // Use pinned location coordinates
+          console.log(`Using pin coordinates for ${day.location}`)
           results.push({ ...day, lng: pinnedForLocation.longitude, lat: pinnedForLocation.latitude, name: pinnedForLocation.name })
         } else {
           // Otherwise geocode the location text
