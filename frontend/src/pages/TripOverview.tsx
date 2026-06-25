@@ -187,6 +187,23 @@ export default function TripOverview() {
     }
   }
 
+  const handleSetCoverPhoto = async (photoUrl: string) => {
+    if (!tripId) return
+
+    const { error } = await supabase
+      .from('trips')
+      .update({ cover_photo_url: photoUrl })
+      .eq('id', tripId)
+
+    if (error) {
+      console.error('Error setting cover photo:', error)
+      setNotification({ type: 'error', message: `Failed to set cover photo: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Cover photo set!' })
+      loadTripData()
+    }
+  }
+
   const handleDeleteJournal = async (journalId: string) => {
     if (!confirm('Delete this journal entry?')) return
 
@@ -280,13 +297,26 @@ export default function TripOverview() {
           padding: '1.5rem',
           marginBottom: '1.5rem'
         }}>
+          {trip.cover_photo_url && (
+            <img
+              src={trip.cover_photo_url}
+              alt={trip.name}
+              style={{
+                width: '100%',
+                height: '200px',
+                objectFit: 'cover',
+                borderRadius: '8px',
+                marginBottom: '1rem'
+              }}
+            />
+          )}
           {(trip.start_date || trip.end_date) && (
             <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
               {trip.start_date ? new Date(trip.start_date).toLocaleDateString() : 'No start date'} - {trip.end_date ? new Date(trip.end_date).toLocaleDateString() : 'No end date'}
             </div>
           )}
           {trip.notes && <div style={{ opacity: 0.8 }}>{trip.notes}</div>}
-          {!trip.start_date && !trip.end_date && !trip.notes && (
+          {!trip.start_date && !trip.end_date && !trip.notes && !trip.cover_photo_url && (
             <div style={{ opacity: 0.5, fontStyle: 'italic' }}>No trip details yet</div>
           )}
         </div>
@@ -521,6 +551,7 @@ export default function TripOverview() {
                   />
                   <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
                     <ActionMenu actions={[
+                      { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
                       { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
                     ]}
                   />

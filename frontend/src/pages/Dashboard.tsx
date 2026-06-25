@@ -263,18 +263,50 @@ export default function Dashboard() {
                   style={{
                     background: 'rgba(255, 255, 255, 0.1)',
                     borderRadius: '12px',
-                    padding: '1.5rem',
+                    padding: '1rem',
                     cursor: 'pointer',
-                    transition: 'transform 0.2s'
+                    transition: 'transform 0.2s',
+                    display: 'flex',
+                    gap: '1rem',
+                    alignItems: 'center'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                    {trip.name}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                    {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
+                  {trip.cover_photo_url ? (
+                    <img
+                      src={trip.cover_photo_url}
+                      alt={trip.name}
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        flexShrink: 0
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '2rem',
+                      flexShrink: 0
+                    }}>
+                      ✈️
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                      {trip.name}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                      {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
               ))}
