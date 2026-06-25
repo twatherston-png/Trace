@@ -106,20 +106,29 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
       for (const day of days) {
         if (!day.location) continue
 
-        try {
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-              day.location
-            )}.json?access_token=${mapboxgl.accessToken}&limit=1`
-          )
-          const data = await response.json()
+        // Check if there's a pinned location for this day
+        const pinnedForDay = pinnedLocations.find(p => p.day_id === day.id)
+        
+        if (pinnedForDay) {
+          // Use pinned location coordinates
+          results.push({ ...day, lng: pinnedForDay.longitude, lat: pinnedForDay.latitude, name: pinnedForDay.name })
+        } else {
+          // Otherwise geocode the location text
+          try {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+                day.location
+              )}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
 
-          if (data.features && data.features.length > 0) {
-            const [lng, lat] = data.features[0].center
-            results.push({ ...day, lng, lat, name: day.location })
+            if (data.features && data.features.length > 0) {
+              const [lng, lat] = data.features[0].center
+              results.push({ ...day, lng, lat, name: day.location })
+            }
+          } catch (error) {
+            console.error('Geocoding error for day:', error)
           }
-        } catch (error) {
-          console.error('Geocoding error for day:', error)
         }
       }
 
@@ -127,7 +136,7 @@ export default function TripMap({ tripId, activities, days }: TripMapProps) {
     }
 
     geocodeDays()
-  }, [days])
+  }, [days, pinnedLocations])
 
   // Geocode activity locations for detail view
   useEffect(() => {
