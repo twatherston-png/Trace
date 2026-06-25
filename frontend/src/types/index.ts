@@ -95,3 +95,15 @@ export interface Location {
   notes?: string
   created_at: string
 }
+
+export interface PinnedLocation {
+  id: string
+  trip_id: string
+  day_id?: string
+  activity_id?: string
+  name: string
+  latitude: number
+  longitude: number
+  notes?: string
+  created_at: string
+}

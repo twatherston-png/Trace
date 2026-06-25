@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { supabase } from '../lib/supabase'
+import type { PinnedLocation } from '../types'
 
 interface Activity {
   id: string
@@ -19,6 +21,7 @@ interface Day {
 }
 
 interface TripMapProps {
+  tripId: string
   activities: Activity[]
   days: Day[]
 }
@@ -29,13 +32,20 @@ interface GeocodedLocation {
   name: string
 }
 
-export default function TripMap({ activities, days }: TripMapProps) {
+export default function TripMap({ tripId, activities, days }: TripMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markers = useRef<mapboxgl.Marker[]>([])
   const [viewMode, setViewMode] = useState<'route' | 'detail'>('route')
   const [geocodedDays, setGeocodedDays] = useState<(Day & GeocodedLocation)[]>([])
   const [geocodedActivities, setGeocodedActivities] = useState<(Activity & GeocodedLocation)[]>([])
+  const [pinnedLocations, setPinnedLocations] = useState<PinnedLocation[]>([])
+  const [isPinning, setIsPinning] = useState(false)
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [pendingPin, setPendingPin] = useState<{ lng: number; lat: number } | null>(null)
+  const [pinName, setPinName] = useState('')
+  const [pinDayId, setPinDayId] = useState('')
+  const [pinNotes, setPinNotes] = useState('')
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -54,13 +64,39 @@ export default function TripMap({ activities, days }: TripMapProps) {
       zoom: 2
     })
 
+    // Handle click when in pinning mode
+    map.current.on('click', (e) => {
+      if (isPinning) {
+        setPendingPin({ lng: e.lngLat.lng, lat: e.lngLat.lat })
+        setShowPinModal(true)
+        setIsPinning(false)
+        if (map.current) {
+          map.current.getCanvas().style.cursor = 'grab'
+        }
+      }
+    })
+
     return () => {
       if (map.current) {
         map.current.remove()
         map.current = null
       }
     }
-  }, [])
+  }, [isPinning])
+
+  // Load pinned locations
+  useEffect(() => {
+    const loadPins = async () => {
+      const { data } = await supabase
+        .from('pinned_locations')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('created_at')
+
+      if (data) setPinnedLocations(data)
+    }
+    loadPins()
+  }, [tripId])
 
   // Geocode day locations for route view
   useEffect(() => {
@@ -124,6 +160,49 @@ export default function TripMap({ activities, days }: TripMapProps) {
     geocodeActivities()
   }, [activities])
 
+  // Save pinned location
+  const handleSavePin = async () => {
+    if (!pendingPin || !pinName.trim()) return
+
+    const { error } = await supabase.from('pinned_locations').insert({
+      trip_id: tripId,
+      name: pinName.trim(),
+      latitude: pendingPin.lat,
+      longitude: pendingPin.lng,
+      day_id: pinDayId || null,
+      notes: pinNotes || null
+    })
+
+    if (!error) {
+      // Reload pins
+      const { data: newData } = await supabase
+        .from('pinned_locations')
+        .select('*')
+        .eq('trip_id', tripId)
+        .order('created_at')
+      if (newData) setPinnedLocations(newData)
+
+      // Reset form
+      setShowPinModal(false)
+      setPendingPin(null)
+      setPinName('')
+      setPinDayId('')
+      setPinNotes('')
+    }
+  }
+
+  // Delete pinned location
+  const handleDeletePin = async (pinId: string) => {
+    const { error } = await supabase
+      .from('pinned_locations')
+      .delete()
+      .eq('id', pinId)
+
+    if (!error) {
+      setPinnedLocations(prev => prev.filter(p => p.id !== pinId))
+    }
+  }
+
   // Render markers and route based on view mode
   useEffect(() => {
     if (!map.current) return
@@ -139,6 +218,8 @@ export default function TripMap({ activities, days }: TripMapProps) {
     if (map.current.getSource('route')) {
       map.current.removeSource('route')
     }
+
+    const allBounds = new mapboxgl.LngLatBounds()
 
     if (viewMode === 'route' && geocodedDays.length > 0) {
       // Sort by date
@@ -211,17 +292,11 @@ export default function TripMap({ activities, days }: TripMapProps) {
           .addTo(map.current!)
 
         markers.current.push(marker)
+        allBounds.extend([day.lng, day.lat])
       })
-
-      // Fit bounds
-      const bounds = new mapboxgl.LngLatBounds()
-      sorted.forEach(d => bounds.extend([d.lng, d.lat]))
-      map.current.fitBounds(bounds, { padding: 50, maxZoom: 10 })
 
     } else if (viewMode === 'detail' && geocodedActivities.length > 0) {
       // Add activity markers
-      const bounds = new mapboxgl.LngLatBounds()
-
       geocodedActivities.forEach(activity => {
         const el = document.createElement('div')
         el.className = 'marker'
@@ -256,15 +331,78 @@ export default function TripMap({ activities, days }: TripMapProps) {
           .addTo(map.current!)
 
         markers.current.push(marker)
-        bounds.extend([activity.lng, activity.lat])
+        allBounds.extend([activity.lng, activity.lat])
       })
-
-      // Fit bounds
-      if (geocodedActivities.length > 0) {
-        map.current.fitBounds(bounds, { padding: 50, maxZoom: 12 })
-      }
     }
-  }, [viewMode, geocodedDays, geocodedActivities, days])
+
+    // Add pinned locations (always visible in both views)
+    pinnedLocations.forEach(pin => {
+      const el = document.createElement('div')
+      el.className = 'marker'
+      el.style.width = '28px'
+      el.style.height = '28px'
+      el.style.borderRadius = '50%'
+      el.style.background = '#E74C3C'
+      el.style.border = '3px solid white'
+      el.style.cursor = 'pointer'
+      el.style.display = 'flex'
+      el.style.alignItems = 'center'
+      el.style.justifyContent = 'center'
+      el.style.fontSize = '14px'
+      el.innerHTML = '📌'
+
+      const day = days.find(d => d.id === pin.day_id)
+      const dateStr = day ? new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([pin.longitude, pin.latitude])
+        .setPopup(
+          new mapboxgl.Popup({ offset: 25 }).setHTML(`
+            <div style="color: black; padding: 0.5rem;">
+              <strong>📌 ${pin.name}</strong><br/>
+              ${dateStr ? `📅 ${dateStr}<br/>` : ''}
+              ${pin.notes ? `<em>${pin.notes}</em><br/>` : ''}
+              <button onclick="window.__deletePin('${pin.id}')" style="
+                margin-top: 0.5rem;
+                padding: 0.25rem 0.5rem;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.8rem;
+              ">Delete Pin</button>
+            </div>
+          `)
+        )
+        .addTo(map.current!)
+
+      markers.current.push(marker)
+      allBounds.extend([pin.longitude, pin.latitude])
+    })
+
+    // Fit bounds if we have any markers
+    if (!allBounds.isEmpty()) {
+      map.current.fitBounds(allBounds, { padding: 50, maxZoom: 12 })
+    }
+  }, [viewMode, geocodedDays, geocodedActivities, pinnedLocations, days])
+
+  // Expose delete function globally for popup button
+  useEffect(() => {
+    (window as any).__deletePin = (pinId: string) => {
+      handleDeletePin(pinId)
+    }
+    return () => {
+      delete (window as any).__deletePin
+    }
+  }, [])
+
+  const handleStartPinning = () => {
+    setIsPinning(true)
+    if (map.current) {
+      map.current.getCanvas().style.cursor = 'crosshair'
+    }
+  }
 
   const getActivityColor = (type?: string) => {
     switch (type) {
@@ -295,7 +433,8 @@ export default function TripMap({ activities, days }: TripMapProps) {
         left: '10px',
         zIndex: 10,
         display: 'flex',
-        gap: '0.5rem'
+        gap: '0.5rem',
+        flexWrap: 'wrap'
       }}>
         <button
           onClick={() => setViewMode('route')}
@@ -331,7 +470,43 @@ export default function TripMap({ activities, days }: TripMapProps) {
         >
           📍 Detail
         </button>
+        <button
+          onClick={handleStartPinning}
+          style={{
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            border: 'none',
+            background: isPinning
+              ? 'linear-gradient(135deg, #E74C3C 0%, #C0392B 100%)'
+              : 'rgba(0, 0, 0, 0.6)',
+            color: 'white',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontSize: '0.85rem'
+          }}
+        >
+          {isPinning ? '✕ Cancel' : '📌 Pin'}
+        </button>
       </div>
+
+      {/* Pinning instruction */}
+      {isPinning && (
+        <div style={{
+          position: 'absolute',
+          bottom: '10px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          background: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '0.5rem 1rem',
+          borderRadius: '8px',
+          fontSize: '0.85rem',
+          fontWeight: 'bold'
+        }}>
+          Click anywhere on the map to drop a pin
+        </div>
+      )}
 
       <div 
         ref={mapContainer} 
@@ -342,6 +517,137 @@ export default function TripMap({ activities, days }: TripMapProps) {
           overflow: 'hidden'
         }} 
       />
+
+      {/* Pin Modal */}
+      {showPinModal && pendingPin && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#1a1a1a',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            width: '100%',
+            maxWidth: '400px',
+            border: '1px solid rgba(255, 255, 255, 0.15)'
+          }}>
+            <h3 style={{ margin: '0 0 1rem', color: 'white', fontSize: '1.2rem' }}>
+              📌 New Pin
+            </h3>
+            <input
+              type="text"
+              placeholder="Pin name (e.g., Huacachina Oasis)"
+              value={pinName}
+              onChange={(e) => setPinName(e.target.value)}
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginBottom: '0.75rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                fontSize: '1rem',
+                boxSizing: 'border-box'
+              }}
+            />
+            <select
+              value={pinDayId}
+              onChange={(e) => setPinDayId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginBottom: '0.75rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                fontSize: '1rem',
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="">Assign to day (optional)</option>
+              {days.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(day => (
+                <option key={day.id} value={day.id}>
+                  {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {day.location ? ` - ${day.location}` : ''}
+                </option>
+              ))}
+            </select>
+            <textarea
+              placeholder="Notes (optional)"
+              value={pinNotes}
+              onChange={(e) => setPinNotes(e.target.value)}
+              rows={2}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                marginBottom: '1rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                fontSize: '1rem',
+                resize: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={handleSavePin}
+                disabled={!pinName.trim()}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: pinName.trim()
+                    ? 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
+                    : 'rgba(255, 255, 255, 0.1)',
+                  color: pinName.trim() ? '#2D1B4E' : 'rgba(255, 255, 255, 0.3)',
+                  fontWeight: 'bold',
+                  cursor: pinName.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '1rem'
+                }}
+              >
+                Save Pin
+              </button>
+              <button
+                onClick={() => {
+                  setShowPinModal(false)
+                  setPendingPin(null)
+                  setPinName('')
+                  setPinDayId('')
+                  setPinNotes('')
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  background: 'transparent',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

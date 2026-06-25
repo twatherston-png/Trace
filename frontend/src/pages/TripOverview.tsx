@@ -16,6 +16,7 @@ export default function TripOverview() {
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [activities, setActivities] = useState<any[]>([])
   const [days, setDays] = useState<any[]>([])
+  const [pinnedLocations, setPinnedLocations] = useState<any[]>([])
   const [showJournalForm, setShowJournalForm] = useState(false)
   const [newJournal, setNewJournal] = useState({ date: '', location: '', content: '' })
   const [uploading, setUploading] = useState(false)
@@ -74,6 +75,13 @@ export default function TripOverview() {
       .eq('trip_id', tripId)
 
     if (daysData) setDays(daysData)
+
+    const { data: pinnedData } = await supabase
+      .from('pinned_locations')
+      .select('*')
+      .eq('trip_id', tripId)
+
+    if (pinnedData) setPinnedLocations(pinnedData)
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -592,9 +600,9 @@ export default function TripOverview() {
         </div>
 
         {/* Map */}
-        {activities.length > 0 && (
+        {(activities.length > 0 || pinnedLocations.length > 0) && (
           <div style={{ marginBottom: '1.5rem' }}>
-            <TripMap activities={activities} days={days} />
+            <TripMap tripId={tripId!} activities={activities} days={days} />
           </div>
         )}
       </div>
