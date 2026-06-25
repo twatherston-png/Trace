@@ -44,6 +44,7 @@ export interface Activity {
 
 export interface Photo {
   id: string
+  user_id: string
   trip_id: string
   day_id?: string
   activity_id?: string
@@ -54,6 +55,8 @@ export interface Photo {
   latitude?: number
   longitude?: number
   taken_at?: string
+  notes?: string
+  journal_entry?: string
   uploaded_at: string
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Day, Activity } from '../types'
+import type { Day, Activity, Photo } from '../types'
 import ActionMenu from './ActionMenu'
 
 interface ItineraryProps {
@@ -12,6 +12,8 @@ interface ItineraryProps {
 export default function Itinerary({ tripId, tripStartDate, tripEndDate }: ItineraryProps) {
   const [days, setDays] = useState<Day[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [showAddDay, setShowAddDay] = useState(false)
   const [showAddActivity, setShowAddActivity] = useState<string | null>(null)
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
@@ -88,6 +90,14 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
       .order('time')
 
     if (activitiesData) setActivities(activitiesData)
+
+    const { data: photosData } = await supabase
+      .from('photos')
+      .select('*')
+      .eq('trip_id', tripId)
+      .order('taken_at', { ascending: false })
+
+    if (photosData) setPhotos(photosData)
   }
 
   const toggleDay = (dayId: string) => {
@@ -263,6 +273,10 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
 
   const getActivitiesForDay = (dayId: string) => {
     return activities.filter(a => a.day_id === dayId)
+  }
+
+  const getPhotosForDay = (dayId: string) => {
+    return photos.filter(p => p.day_id === dayId)
   }
 
   const getDaySummary = (dayId: string) => {
@@ -551,6 +565,30 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                 {/* Expanded Content */}
                 {isExpanded && (
                   <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                    {/* Photos for this day */}
+                    {getPhotosForDay(day.id).length > 0 && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.5rem' }}>📸 Photos</div>
+                        <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                          {getPhotosForDay(day.id).map(photo => (
+                            <img
+                              key={photo.id}
+                              src={photo.url}
+                              alt={photo.caption || ''}
+                              onClick={() => setSelectedPhoto(photo)}
+                              style={{
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '6px',
+                                objectFit: 'cover',
+                                cursor: 'pointer'
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Activities for this day */}
                     {dayActivities.length > 0 && (
                       <div style={{ marginBottom: '1rem' }}>
@@ -1185,6 +1223,36 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Photo Lightbox */}
+      {selectedPhoto && (
+        <div
+          onClick={() => setSelectedPhoto(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 5000,
+            padding: '1rem'
+          }}
+        >
+          <img
+            src={selectedPhoto.url}
+            alt={selectedPhoto.caption || ''}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '90vh',
+              borderRadius: '8px'
+            }}
+          />
         </div>
       )}
     </div>
