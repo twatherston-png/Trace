@@ -2,12 +2,13 @@ import { useNavigate } from 'react-router-dom'
 
 interface TopBarProps {
   title: string
+  subtitle?: string
   showBack?: boolean
   onBack?: () => void
   rightContent?: React.ReactNode
 }
 
-export default function TopBar({ title, showBack, onBack, rightContent }: TopBarProps) {
+export default function TopBar({ title, subtitle, showBack, onBack, rightContent }: TopBarProps) {
   const navigate = useNavigate()
 
   return (
@@ -41,9 +42,16 @@ export default function TopBar({ title, showBack, onBack, rightContent }: TopBar
             ←
           </button>
         )}
-        <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>
-          {title}
-        </h1>
+        <div>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white', margin: 0 }}>
+            {title}
+          </h1>
+          {subtitle && (
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>
+              {subtitle}
+            </div>
+          )}
+        </div>
       </div>
       {rightContent && <div>{rightContent}</div>}
     </div>

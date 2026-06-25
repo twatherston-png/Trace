@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import type { Trip, Day, Photo, JournalEntry } from '../types'
+import type { Trip, Photo, JournalEntry } from '../types'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
@@ -10,7 +10,6 @@ export default function TripOverview() {
   const { tripId } = useParams()
   const navigate = useNavigate()
   const [trip, setTrip] = useState<Trip | null>(null)
-  const [days, setDays] = useState<Day[]>([])
   const [photos, setPhotos] = useState<Photo[]>([])
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([])
   const [showJournalForm, setShowJournalForm] = useState(false)
@@ -42,14 +41,6 @@ export default function TripOverview() {
       .single()
 
     if (tripData) setTrip(tripData)
-
-    const { data: daysData } = await supabase
-      .from('days')
-      .select('*')
-      .eq('trip_id', tripId)
-      .order('date')
-
-    if (daysData) setDays(daysData)
 
     const { data: photosData } = await supabase
       .from('photos')
@@ -263,6 +254,9 @@ export default function TripOverview() {
     }}>
       <TopBar
         title={trip.name}
+        subtitle={trip.start_date && trip.end_date 
+          ? `${new Date(trip.start_date).toLocaleDateString()} - ${new Date(trip.end_date).toLocaleDateString()}`
+          : ''}
         showBack
         onBack={() => navigate('/trips')}
         rightContent={
@@ -476,7 +470,9 @@ export default function TripOverview() {
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#D4AF37' }}>
-              {days.length}
+              {trip.start_date && trip.end_date
+                ? Math.max(1, Math.ceil((new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+                : 0}
             </div>
             <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Days</div>
           </div>
