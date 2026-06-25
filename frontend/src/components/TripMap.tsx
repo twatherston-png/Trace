@@ -23,17 +23,30 @@ export default function TripMap({ activities }: TripMapProps) {
   useEffect(() => {
     if (!mapContainer.current) return
 
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN
+    const token = import.meta.env.VITE_MAPBOX_TOKEN
+    if (!token) {
+      console.error('Mapbox token not found in environment variables')
+      return
+    }
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [0, 20],
-      zoom: 2
-    })
+    mapboxgl.accessToken = token
+
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [0, 20],
+        zoom: 2
+      })
+    } catch (error) {
+      console.error('Map initialization error:', error)
+    }
 
     return () => {
-      map.current?.remove()
+      if (map.current) {
+        map.current.remove()
+        map.current = null
+      }
     }
   }, [])
 
