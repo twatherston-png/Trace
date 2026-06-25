@@ -12,6 +12,9 @@ export default function PhotosGallery() {
   const [sortBy, setSortBy] = useState<'date' | 'trip' | 'location'>('date')
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null)
+  const [bulkEditing, setBulkEditing] = useState(false)
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [selectMode, setSelectMode] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   
   // Edit form state
@@ -132,6 +135,84 @@ export default function PhotosGallery() {
     }
   }
 
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode)
+    setSelectedPhotos(new Set())
+  }
+
+  const togglePhotoSelection = (photoId: string) => {
+    const newSelected = new Set(selectedPhotos)
+    if (newSelected.has(photoId)) {
+      newSelected.delete(photoId)
+    } else {
+      newSelected.add(photoId)
+    }
+    setSelectedPhotos(newSelected)
+  }
+
+  const selectAllPhotos = () => {
+    if (selectedPhotos.size === photos.length) {
+      setSelectedPhotos(new Set())
+    } else {
+      setSelectedPhotos(new Set(photos.map(p => p.id)))
+    }
+  }
+
+  const handleBulkEdit = () => {
+    if (selectedPhotos.size === 0) return
+    setBulkEditing(true)
+    setEditDate('')
+    setEditLocation('')
+    setEditNotes('')
+    setEditJournal('')
+    setEditTripId('')
+    setEditDayId('')
+  }
+
+  const handleBulkSave = async () => {
+    if (selectedPhotos.size === 0) return
+
+    // Auto-assign day if date and trip are set
+    let autoDayId = editDayId
+    if (editDate && editTripId && !autoDayId) {
+      const matchingDay = days.find(d => 
+        d.trip_id === editTripId && 
+        d.date === editDate
+      )
+      if (matchingDay) {
+        autoDayId = matchingDay.id
+      }
+    }
+
+    const updates: any = {}
+    if (editDate) updates.taken_at = editDate
+    if (editLocation) updates.location = editLocation
+    if (editNotes) updates.notes = editNotes
+    if (editJournal) updates.journal_entry = editJournal
+    if (editTripId) updates.trip_id = editTripId
+    if (autoDayId) updates.day_id = autoDayId
+
+    if (Object.keys(updates).length === 0) {
+      setNotification({ type: 'error', message: 'No fields to update' })
+      return
+    }
+
+    const { error } = await supabase
+      .from('photos')
+      .update(updates)
+      .in('id', Array.from(selectedPhotos))
+
+    if (error) {
+      setNotification({ type: 'error', message: `Failed to save: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: `${selectedPhotos.size} photos updated!` })
+      setBulkEditing(false)
+      setSelectedPhotos(new Set())
+      setSelectMode(false)
+      loadPhotos()
+    }
+  }
+
   const sortedPhotos = [...photos].sort((a, b) => {
     if (sortBy === 'date') {
       return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
@@ -193,7 +274,8 @@ export default function PhotosGallery() {
         <div style={{
           display: 'flex',
           gap: '0.5rem',
-          marginBottom: '1.5rem'
+          marginBottom: '1.5rem',
+          flexWrap: 'wrap'
         }}>
           {(['date', 'trip', 'location'] as const).map(sort => (
             <button
@@ -214,6 +296,55 @@ export default function PhotosGallery() {
               {sort}
             </button>
           ))}
+          <button
+            onClick={toggleSelectMode}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: selectMode
+                ? 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
+                : 'rgba(255, 255, 255, 0.1)',
+              color: selectMode ? '#2D1B4E' : 'white',
+              cursor: 'pointer',
+              fontWeight: selectMode ? 'bold' : 'normal'
+            }}
+          >
+            {selectMode ? '✓ Select Mode' : '☐ Select'}
+          </button>
+          {selectMode && (
+            <>
+              <button
+                onClick={selectAllPhotos}
+                style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                {selectedPhotos.size === photos.length ? 'Deselect All' : 'Select All'}
+              </button>
+              {selectedPhotos.size > 0 && (
+                <button
+                  onClick={handleBulkEdit}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                    color: '#2D1B4E',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Edit {selectedPhotos.size} Photo{selectedPhotos.size !== 1 ? 's' : ''}
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Photos Grid */}
@@ -253,27 +384,60 @@ export default function PhotosGallery() {
                         aspectRatio: '1',
                         borderRadius: '8px',
                         overflow: 'hidden',
-                        background: 'rgba(255, 255, 255, 0.1)'
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: selectedPhotos.has(photo.id) ? '3px solid #D4AF37' : 'none'
                       }}
                     >
                       <img
                         src={photo.url}
                         alt={photo.caption || 'Photo'}
-                        onClick={() => setSelectedPhoto(photo)}
+                        onClick={() => {
+                          if (selectMode) {
+                            togglePhotoSelection(photo.id)
+                          } else {
+                            setSelectedPhoto(photo)
+                          }
+                        }}
                         style={{
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          cursor: 'pointer'
+                          cursor: selectMode ? 'pointer' : 'pointer'
                         }}
                       />
-                      <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
-                        <ActionMenu actions={[
-                          { label: '✏️ Edit Details', onClick: () => handleOpenEdit(photo) },
-                          { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
-                        ]}
-                      />
-                      </div>
+                      {selectMode && (
+                        <div
+                          onClick={() => togglePhotoSelection(photo.id)}
+                          style={{
+                            position: 'absolute',
+                            top: '8px',
+                            left: '8px',
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: selectedPhotos.has(photo.id) ? '#D4AF37' : 'rgba(0,0,0,0.5)',
+                            border: '2px solid white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {selectedPhotos.has(photo.id) ? '✓' : ''}
+                        </div>
+                      )}
+                      {!selectMode && (
+                        <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                          <ActionMenu actions={[
+                            { label: '✏️ Edit Details', onClick: () => handleOpenEdit(photo) },
+                            { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
+                          ]}
+                        />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -530,6 +694,167 @@ export default function PhotosGallery() {
                 }}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Edit Modal */}
+      {bulkEditing && (
+        <div
+          onClick={() => setBulkEditing(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.95)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1rem',
+            overflowY: 'auto',
+            paddingTop: '80px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#1a1a1a',
+              borderRadius: '16px',
+              padding: '1.5rem',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}
+          >
+            <h3 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '1.2rem' }}>Edit {selectedPhotos.size} Photos</h3>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+              Only filled fields will be updated. Leave blank to keep existing values.
+            </p>
+
+            {/* Date */}
+            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+              Date Taken
+            </label>
+            <input
+              type="date"
+              value={editDate}
+              onChange={(e) => setEditDate(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '1rem'
+              }}
+            />
+
+            {/* Location */}
+            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+              Location
+            </label>
+            <input
+              type="text"
+              value={editLocation}
+              onChange={(e) => setEditLocation(e.target.value)}
+              placeholder="e.g. Lima, Peru"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '1rem'
+              }}
+            />
+
+            {/* Trip */}
+            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+              Trip
+            </label>
+            <select
+              value={editTripId}
+              onChange={(e) => setEditTripId(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '1rem'
+              }}
+            >
+              <option value="" style={{ background: '#1a1a1a' }}>No change</option>
+              {trips.map(t => (
+                <option key={t.id} value={t.id} style={{ background: '#1a1a1a' }}>{t.name}</option>
+              ))}
+            </select>
+
+            {/* Notes */}
+            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+              Notes
+            </label>
+            <textarea
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="Quick notes..."
+              rows={2}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+                color: 'white',
+                marginBottom: '1.5rem',
+                fontSize: '1rem',
+                resize: 'vertical'
+              }}
+            />
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => setBulkEditing(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  background: 'transparent',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkSave}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                  color: '#2D1B4E',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Update All
               </button>
             </div>
           </div>
