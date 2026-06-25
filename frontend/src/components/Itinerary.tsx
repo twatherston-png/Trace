@@ -14,6 +14,7 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
   const [activities, setActivities] = useState<Activity[]>([])
   const [showAddDay, setShowAddDay] = useState(false)
   const [showAddActivity, setShowAddActivity] = useState<string | null>(null)
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set())
   const [newDay, setNewDay] = useState({ date: '', notes: '' })
   const [newActivity, setNewActivity] = useState<{
     name: string
@@ -76,6 +77,18 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
       .order('time')
 
     if (activitiesData) setActivities(activitiesData)
+  }
+
+  const toggleDay = (dayId: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev)
+      if (next.has(dayId)) {
+        next.delete(dayId)
+      } else {
+        next.add(dayId)
+      }
+      return next
+    })
   }
 
   const handleAddDay = async (e: React.FormEvent) => {
@@ -193,6 +206,25 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
     return activities.filter(a => a.day_id === dayId)
   }
 
+  const getDaySummary = (dayId: string) => {
+    const dayActivities = getActivitiesForDay(dayId)
+    if (dayActivities.length === 0) return 'No activities'
+    
+    const types = dayActivities.reduce((acc, a) => {
+      const type = a.activity_type || 'activity'
+      acc[type] = (acc[type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const parts = []
+    if (types.transport) parts.push(`${types.transport} transport`)
+    if (types.accommodation) parts.push(`${types.accommodation} stay`)
+    if (types.activity) parts.push(`${types.activity} activity`)
+    if (types.food) parts.push(`${types.food} food`)
+
+    return parts.join(', ')
+  }
+
   return (
     <div style={{ marginBottom: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -286,163 +318,115 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
           No days added yet. Add your first day!
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {days.map(day => (
-            <div key={day.id} style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              padding: '1.5rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>
-                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </div>
-                  {day.notes && <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>{day.notes}</div>}
-                </div>
-                <button
-                  onClick={() => handleDeleteDay(day.id)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {days.map(day => {
+            const isExpanded = expandedDays.has(day.id)
+            const dayActivities = getActivitiesForDay(day.id)
+            
+            return (
+              <div key={day.id} style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                overflow: 'hidden'
+              }}>
+                {/* Day Header - Clickable */}
+                <div 
+                  onClick={() => toggleDay(day.id)}
                   style={{
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(244, 67, 54, 0.5)',
-                    background: 'rgba(244, 67, 54, 0.1)',
-                    color: '#f44336',
+                    padding: '1rem 1.5rem',
                     cursor: 'pointer',
-                    fontSize: '0.8rem'
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: isExpanded ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+                    transition: 'background 0.2s'
                   }}
                 >
-                  Delete
-                </button>
-              </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                      <span style={{ 
+                        fontSize: '0.8rem', 
+                        transition: 'transform 0.2s',
+                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                        display: 'inline-block'
+                      }}>
+                        ▶
+                      </span>
+                      <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    {!isExpanded && (
+                      <div style={{ fontSize: '0.85rem', opacity: 0.6, marginLeft: '1.5rem' }}>
+                        {getDaySummary(day.id)}
+                      </div>
+                    )}
+                    {isExpanded && day.notes && (
+                      <div style={{ fontSize: '0.9rem', opacity: 0.8, marginLeft: '1.5rem' }}>{day.notes}</div>
+                    )}
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <ActionMenu actions={[
+                      { label: '🗑️ Delete Day', onClick: () => handleDeleteDay(day.id), danger: true }
+                    ]} />
+                  </div>
+                </div>
 
-              {/* Activities for this day */}
-              {getActivitiesForDay(day.id).length > 0 && (
-                <div style={{ marginBottom: '1rem' }}>
-                  {getActivitiesForDay(day.id).map(activity => (
-                    <div key={activity.id} style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '8px',
-                      padding: '1rem',
-                      marginBottom: '0.5rem'
-                    }}>
-                      {editingActivity === activity.id ? (
-                        <form onSubmit={(e) => handleUpdateActivity(activity.id, e)}>
-                          {/* Activity Type Selector */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
-                            {[
-                              { type: 'transport', icon: '🚗', label: 'Transport' },
-                              { type: 'accommodation', icon: '🏨', label: 'Accommodation' },
-                              { type: 'activity', icon: '🎯', label: 'Activity' },
-                              { type: 'food', icon: '🍽️', label: 'Food & Drink' }
-                            ].map(({ type, icon, label }) => (
-                              <button
-                                key={type}
-                                type="button"
-                                onClick={() => setEditActivityData({ ...editActivityData, activity_type: type as any })}
-                                style={{
-                                  padding: '0.75rem',
-                                  borderRadius: '8px',
-                                  border: editActivityData.activity_type === type ? '2px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.2)',
-                                  background: editActivityData.activity_type === type ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                                  color: 'white',
-                                  cursor: 'pointer',
-                                  fontSize: '0.9rem',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '0.5rem'
-                                }}
-                              >
-                                <span>{icon}</span>
-                                <span>{label}</span>
-                              </button>
-                            ))}
-                          </div>
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                    {/* Activities for this day */}
+                    {dayActivities.length > 0 && (
+                      <div style={{ marginBottom: '1rem' }}>
+                        {dayActivities.map(activity => (
+                          <div key={activity.id} style={{
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderRadius: '8px',
+                            padding: '1rem',
+                            marginBottom: '0.5rem'
+                          }}>
+                            {editingActivity === activity.id ? (
+                              <form onSubmit={(e) => handleUpdateActivity(activity.id, e)}>
+                                {/* Activity Type Selector */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+                                  {[
+                                    { type: 'transport', icon: '🚗', label: 'Transport' },
+                                    { type: 'accommodation', icon: '🏨', label: 'Accommodation' },
+                                    { type: 'activity', icon: '🎯', label: 'Activity' },
+                                    { type: 'food', icon: '🍽️', label: 'Food & Drink' }
+                                  ].map(({ type, icon, label }) => (
+                                    <button
+                                      key={type}
+                                      type="button"
+                                      onClick={() => setEditActivityData({ ...editActivityData, activity_type: type as any })}
+                                      style={{
+                                        padding: '0.75rem',
+                                        borderRadius: '8px',
+                                        border: editActivityData.activity_type === type ? '2px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.2)',
+                                        background: editActivityData.activity_type === type ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '0.5rem'
+                                      }}
+                                    >
+                                      <span>{icon}</span>
+                                      <span>{label}</span>
+                                    </button>
+                                  ))}
+                                </div>
 
-                          <input
-                            type="text"
-                            placeholder={editActivityData.activity_type === 'transport' ? 'Transport Name' :
-                                        editActivityData.activity_type === 'accommodation' ? 'Accommodation Name' :
-                                        editActivityData.activity_type === 'food' ? 'Restaurant Name' : 'Activity Name'}
-                            value={editActivityData.name}
-                            onChange={(e) => setEditActivityData({ ...editActivityData, name: e.target.value })}
-                            required
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              marginBottom: '0.75rem',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              color: 'white',
-                              fontSize: '1rem'
-                            }}
-                          />
-
-                          <input
-                            type="time"
-                            value={editActivityData.time}
-                            onChange={(e) => setEditActivityData({ ...editActivityData, time: e.target.value })}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              marginBottom: '0.75rem',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              color: 'white',
-                              fontSize: '1rem'
-                            }}
-                          />
-
-                          <input
-                            type="text"
-                            placeholder="Location (optional)"
-                            value={editActivityData.location}
-                            onChange={(e) => setEditActivityData({ ...editActivityData, location: e.target.value })}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              marginBottom: '0.75rem',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              color: 'white',
-                              fontSize: '1rem'
-                            }}
-                          />
-
-                          {editActivityData.activity_type === 'transport' && (
-                            <>
-                              <select
-                                value={editActivityData.transport_type}
-                                onChange={(e) => setEditActivityData({ ...editActivityData, transport_type: e.target.value })}
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem',
-                                  marginBottom: '0.75rem',
-                                  borderRadius: '8px',
-                                  border: 'none',
-                                  background: 'rgba(255, 255, 255, 0.1)',
-                                  color: 'white',
-                                  fontSize: '1rem'
-                                }}
-                              >
-                                <option value="flight">✈️ Flight</option>
-                                <option value="train">🚂 Train</option>
-                                <option value="bus">🚌 Bus</option>
-                                <option value="car">🚗 Car</option>
-                                <option value="taxi">🚕 Taxi</option>
-                                <option value="other">Other</option>
-                              </select>
-
-                              {editActivityData.transport_type === 'flight' && (
                                 <input
                                   type="text"
-                                  placeholder="Flight number (e.g., AA1234)"
-                                  value={editActivityData.flight_number}
-                                  onChange={(e) => setEditActivityData({ ...editActivityData, flight_number: e.target.value })}
+                                  placeholder={editActivityData.activity_type === 'transport' ? 'Transport Name' :
+                                              editActivityData.activity_type === 'accommodation' ? 'Accommodation Name' :
+                                              editActivityData.activity_type === 'food' ? 'Restaurant Name' : 'Activity Name'}
+                                  value={editActivityData.name}
+                                  onChange={(e) => setEditActivityData({ ...editActivityData, name: e.target.value })}
+                                  required
                                   style={{
                                     width: '100%',
                                     padding: '0.75rem',
@@ -454,273 +438,272 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                                     fontSize: '1rem'
                                   }}
                                 />
-                              )}
-                            </>
-                          )}
 
-                          <input
-                            type="text"
-                            placeholder="Booking reference (optional)"
-                            value={editActivityData.booking_reference}
-                            onChange={(e) => setEditActivityData({ ...editActivityData, booking_reference: e.target.value })}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              marginBottom: '0.75rem',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              color: 'white',
-                              fontSize: '1rem'
-                            }}
-                          />
+                                <input
+                                  type="time"
+                                  value={editActivityData.time}
+                                  onChange={(e) => setEditActivityData({ ...editActivityData, time: e.target.value })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    marginBottom: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'white',
+                                    fontSize: '1rem'
+                                  }}
+                                />
 
-                          <textarea
-                            placeholder="Notes (optional)"
-                            value={editActivityData.notes}
-                            onChange={(e) => setEditActivityData({ ...editActivityData, notes: e.target.value })}
-                            rows={2}
-                            style={{
-                              width: '100%',
-                              padding: '0.75rem',
-                              marginBottom: '0.75rem',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: 'rgba(255, 255, 255, 0.1)',
-                              color: 'white',
-                              fontSize: '1rem',
-                              resize: 'none'
-                            }}
-                          />
+                                <input
+                                  type="text"
+                                  placeholder="Location (optional)"
+                                  value={editActivityData.location}
+                                  onChange={(e) => setEditActivityData({ ...editActivityData, location: e.target.value })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    marginBottom: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'white',
+                                    fontSize: '1rem'
+                                  }}
+                                />
 
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {editActivityData.activity_type === 'transport' && (
+                                  <>
+                                    <select
+                                      value={editActivityData.transport_type}
+                                      onChange={(e) => setEditActivityData({ ...editActivityData, transport_type: e.target.value })}
+                                      style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        marginBottom: '0.75rem',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: 'rgba(255, 255, 255, 0.1)',
+                                        color: 'white',
+                                        fontSize: '1rem'
+                                      }}
+                                    >
+                                      <option value="flight">✈️ Flight</option>
+                                      <option value="train">🚂 Train</option>
+                                      <option value="bus">🚌 Bus</option>
+                                      <option value="car">🚗 Car</option>
+                                      <option value="taxi">🚕 Taxi</option>
+                                      <option value="other">Other</option>
+                                    </select>
+
+                                    {editActivityData.transport_type === 'flight' && (
+                                      <input
+                                        type="text"
+                                        placeholder="Flight number (e.g., AA1234)"
+                                        value={editActivityData.flight_number}
+                                        onChange={(e) => setEditActivityData({ ...editActivityData, flight_number: e.target.value })}
+                                        style={{
+                                          width: '100%',
+                                          padding: '0.75rem',
+                                          marginBottom: '0.75rem',
+                                          borderRadius: '8px',
+                                          border: 'none',
+                                          background: 'rgba(255, 255, 255, 0.1)',
+                                          color: 'white',
+                                          fontSize: '1rem'
+                                        }}
+                                      />
+                                    )}
+                                  </>
+                                )}
+
+                                <input
+                                  type="text"
+                                  placeholder="Booking reference (optional)"
+                                  value={editActivityData.booking_reference}
+                                  onChange={(e) => setEditActivityData({ ...editActivityData, booking_reference: e.target.value })}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    marginBottom: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'white',
+                                    fontSize: '1rem'
+                                  }}
+                                />
+
+                                <textarea
+                                  placeholder="Notes (optional)"
+                                  value={editActivityData.notes}
+                                  onChange={(e) => setEditActivityData({ ...editActivityData, notes: e.target.value })}
+                                  rows={2}
+                                  style={{
+                                    width: '100%',
+                                    padding: '0.75rem',
+                                    marginBottom: '0.75rem',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: 'white',
+                                    fontSize: '1rem',
+                                    resize: 'none'
+                                  }}
+                                />
+
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button
+                                    type="submit"
+                                    style={{
+                                      flex: 1,
+                                      padding: '0.75rem',
+                                      borderRadius: '8px',
+                                      border: 'none',
+                                      background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                                      color: '#2D1B4E',
+                                      fontWeight: 'bold',
+                                      cursor: 'pointer',
+                                      fontSize: '1rem'
+                                    }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingActivity(null)}
+                                    style={{
+                                      flex: 1,
+                                      padding: '0.75rem',
+                                      borderRadius: '8px',
+                                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                                      background: 'transparent',
+                                      color: 'white',
+                                      cursor: 'pointer',
+                                      fontSize: '1rem'
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                                <div style={{ fontSize: '1.5rem' }}>{getActivityIcon(activity.activity_type || 'activity')}</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{activity.name}</div>
+                                  {activity.activity_type === 'transport' && activity.transport_type && (
+                                    <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                      {activity.transport_type === 'flight' ? '✈️' :
+                                       activity.transport_type === 'train' ? '🚂' :
+                                       activity.transport_type === 'bus' ? '🚌' :
+                                       activity.transport_type === 'car' ? '🚗' :
+                                       activity.transport_type === 'taxi' ? '🚕' : '🚗'} {activity.transport_type.charAt(0).toUpperCase() + activity.transport_type.slice(1)}
+                                    </div>
+                                  )}
+                                  {activity.time && (
+                                    <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                      🕐 {activity.time}
+                                    </div>
+                                  )}
+                                  {activity.location && (
+                                    <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                      📍 {activity.location}
+                                    </div>
+                                  )}
+                                  {activity.flight_number && (
+                                    <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                      ✈️ {activity.flight_number}
+                                    </div>
+                                  )}
+                                  {activity.booking_reference && (
+                                    <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+                                      🎫 {activity.booking_reference}
+                                    </div>
+                                  )}
+                                  {activity.notes && (
+                                    <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '0.5rem' }}>
+                                      {activity.notes}
+                                    </div>
+                                  )}
+                                </div>
+                                <ActionMenu actions={[
+                                  { label: '✏️ Edit', onClick: () => handleEditActivity(activity) },
+                                  { label: '🗑️ Delete', onClick: () => handleDeleteActivity(activity.id), danger: true }
+                                ]} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add Activity Button */}
+                    <button
+                      onClick={() => setShowAddActivity(showAddActivity === day.id ? null : day.id)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: '1px dashed rgba(255, 255, 255, 0.3)',
+                        background: 'transparent',
+                        color: 'white',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        opacity: 0.7
+                      }}
+                    >
+                      {showAddActivity === day.id ? 'Cancel' : '+ Add Activity'}
+                    </button>
+
+                    {/* Add Activity Form */}
+                    {showAddActivity === day.id && (
+                      <form onSubmit={(e) => handleAddActivity(day.id, e)} style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        marginTop: '0.5rem'
+                      }}>
+                        {/* Activity Type Selector */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+                          {[
+                            { type: 'transport', icon: '🚗', label: 'Transport' },
+                            { type: 'accommodation', icon: '🏨', label: 'Accommodation' },
+                            { type: 'activity', icon: '🎯', label: 'Activity' },
+                            { type: 'food', icon: '🍽️', label: 'Food & Drink' }
+                          ].map(({ type, icon, label }) => (
                             <button
-                              type="submit"
-                              style={{
-                                flex: 1,
-                                padding: '0.75rem',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                                color: '#2D1B4E',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                fontSize: '1rem'
-                              }}
-                            >
-                              Save
-                            </button>
-                            <button
+                              key={type}
                               type="button"
-                              onClick={() => setEditingActivity(null)}
+                              onClick={() => setNewActivity({ ...newActivity, activity_type: type as any })}
                               style={{
-                                flex: 1,
                                 padding: '0.75rem',
                                 borderRadius: '8px',
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                                background: 'transparent',
+                                border: newActivity.activity_type === type ? '2px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.2)',
+                                background: newActivity.activity_type === type ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
                                 color: 'white',
                                 cursor: 'pointer',
-                                fontSize: '1rem'
+                                fontSize: '0.9rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem'
                               }}
                             >
-                              Cancel
+                              <span>{icon}</span>
+                              <span>{label}</span>
                             </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                          <div style={{ fontSize: '1.5rem' }}>{getActivityIcon(activity.activity_type || 'activity')}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 'bold', marginBottom: '0.25rem' }}>{activity.name}</div>
-                            {activity.activity_type === 'transport' && activity.transport_type && (
-                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                                {activity.transport_type === 'flight' ? '✈️' :
-                                 activity.transport_type === 'train' ? '🚂' :
-                                 activity.transport_type === 'bus' ? '🚌' :
-                                 activity.transport_type === 'car' ? '🚗' :
-                                 activity.transport_type === 'taxi' ? '🚕' : '🚗'} {activity.transport_type.charAt(0).toUpperCase() + activity.transport_type.slice(1)}
-                              </div>
-                            )}
-                            {activity.time && (
-                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                                🕐 {activity.time}
-                              </div>
-                            )}
-                            {activity.location && (
-                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                                📍 {activity.location}
-                              </div>
-                            )}
-                            {activity.flight_number && (
-                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                                ✈️ {activity.flight_number}
-                              </div>
-                            )}
-                            {activity.booking_reference && (
-                              <div style={{ fontSize: '0.85rem', opacity: 0.7, marginBottom: '0.25rem' }}>
-                                🎫 {activity.booking_reference}
-                              </div>
-                            )}
-                            {activity.notes && (
-                              <div style={{ fontSize: '0.85rem', opacity: 0.8, marginTop: '0.5rem' }}>
-                                {activity.notes}
-                              </div>
-                            )}
-                          </div>
-                          <ActionMenu actions={[
-                            { label: '✏️ Edit', onClick: () => handleEditActivity(activity) },
-                            { label: '🗑️ Delete', onClick: () => handleDeleteActivity(activity.id), danger: true }
-                          ]}
-                        />
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              {/* Add Activity Button */}
-              <button
-                onClick={() => setShowAddActivity(showAddActivity === day.id ? null : day.id)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: '1px dashed rgba(255, 255, 255, 0.3)',
-                  background: 'transparent',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  opacity: 0.7
-                }}
-              >
-                {showAddActivity === day.id ? 'Cancel' : '+ Add Activity'}
-              </button>
-
-              {/* Add Activity Form */}
-              {showAddActivity === day.id && (
-                <form onSubmit={(e) => handleAddActivity(day.id, e)} style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  marginTop: '0.5rem'
-                }}>
-                  {/* Activity Type Selector */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
-                    {[
-                      { type: 'transport', icon: '🚗', label: 'Transport' },
-                      { type: 'accommodation', icon: '🏨', label: 'Accommodation' },
-                      { type: 'activity', icon: '🎯', label: 'Activity' },
-                      { type: 'food', icon: '🍽️', label: 'Food & Drink' }
-                    ].map(({ type, icon, label }) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setNewActivity({ ...newActivity, activity_type: type as any })}
-                        style={{
-                          padding: '0.75rem',
-                          borderRadius: '8px',
-                          border: newActivity.activity_type === type ? '2px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.2)',
-                          background: newActivity.activity_type === type ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                          color: 'white',
-                          cursor: 'pointer',
-                          fontSize: '0.9rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem'
-                        }}
-                      >
-                        <span>{icon}</span>
-                        <span>{label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <input
-                    type="text"
-                    placeholder={newActivity.activity_type === 'transport' ? 'Transport Name' :
-                                newActivity.activity_type === 'accommodation' ? 'Accommodation Name' :
-                                newActivity.activity_type === 'food' ? 'Restaurant Name' : 'Activity Name'}
-                    value={newActivity.name}
-                    onChange={(e) => setNewActivity({ ...newActivity, name: e.target.value })}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      marginBottom: '0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      fontSize: '1rem'
-                    }}
-                  />
-
-                  <input
-                    type="time"
-                    value={newActivity.time}
-                    onChange={(e) => setNewActivity({ ...newActivity, time: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      marginBottom: '0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      fontSize: '1rem'
-                    }}
-                  />
-
-                  <input
-                    type="text"
-                    placeholder="Location (optional)"
-                    value={newActivity.location}
-                    onChange={(e) => setNewActivity({ ...newActivity, location: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      marginBottom: '0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      fontSize: '1rem'
-                    }}
-                  />
-
-                  {newActivity.activity_type === 'transport' && (
-                    <>
-                      <select
-                        value={newActivity.transport_type}
-                        onChange={(e) => setNewActivity({ ...newActivity, transport_type: e.target.value })}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          marginBottom: '0.75rem',
-                          borderRadius: '8px',
-                          border: 'none',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: 'white',
-                          fontSize: '1rem'
-                        }}
-                      >
-                        <option value="flight">✈️ Flight</option>
-                        <option value="train">🚂 Train</option>
-                        <option value="bus">🚌 Bus</option>
-                        <option value="car">🚗 Car</option>
-                        <option value="taxi">🚕 Taxi</option>
-                        <option value="other">Other</option>
-                      </select>
-
-                      {newActivity.transport_type === 'flight' && (
                         <input
                           type="text"
-                          placeholder="Flight number (e.g., AA1234)"
-                          value={newActivity.flight_number}
-                          onChange={(e) => setNewActivity({ ...newActivity, flight_number: e.target.value })}
+                          placeholder={newActivity.activity_type === 'transport' ? 'Transport Name' :
+                                      newActivity.activity_type === 'accommodation' ? 'Accommodation Name' :
+                                      newActivity.activity_type === 'food' ? 'Restaurant Name' : 'Activity Name'}
+                          value={newActivity.name}
+                          onChange={(e) => setNewActivity({ ...newActivity, name: e.target.value })}
+                          required
                           style={{
                             width: '100%',
                             padding: '0.75rem',
@@ -732,65 +715,143 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                             fontSize: '1rem'
                           }}
                         />
-                      )}
-                    </>
-                  )}
 
-                  <input
-                    type="text"
-                    placeholder="Booking reference (optional)"
-                    value={newActivity.booking_reference}
-                    onChange={(e) => setNewActivity({ ...newActivity, booking_reference: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      marginBottom: '0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      fontSize: '1rem'
-                    }}
-                  />
+                        <input
+                          type="time"
+                          value={newActivity.time}
+                          onChange={(e) => setNewActivity({ ...newActivity, time: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginBottom: '0.75rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '1rem'
+                          }}
+                        />
 
-                  <textarea
-                    placeholder="Notes (optional)"
-                    value={newActivity.notes}
-                    onChange={(e) => setNewActivity({ ...newActivity, notes: e.target.value })}
-                    rows={2}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      marginBottom: '0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      fontSize: '1rem',
-                      resize: 'none'
-                    }}
-                  />
+                        <input
+                          type="text"
+                          placeholder="Location (optional)"
+                          value={newActivity.location}
+                          onChange={(e) => setNewActivity({ ...newActivity, location: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginBottom: '0.75rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '1rem'
+                          }}
+                        />
 
-                  <button
-                    type="submit"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                      color: '#2D1B4E',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      fontSize: '1rem'
-                    }}
-                  >
-                    Add Activity
-                  </button>
-                </form>
-              )}
-            </div>
-          ))}
+                        {newActivity.activity_type === 'transport' && (
+                          <>
+                            <select
+                              value={newActivity.transport_type}
+                              onChange={(e) => setNewActivity({ ...newActivity, transport_type: e.target.value })}
+                              style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                marginBottom: '0.75rem',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                color: 'white',
+                                fontSize: '1rem'
+                              }}
+                            >
+                              <option value="flight">✈️ Flight</option>
+                              <option value="train">🚂 Train</option>
+                              <option value="bus">🚌 Bus</option>
+                              <option value="car">🚗 Car</option>
+                              <option value="taxi">🚕 Taxi</option>
+                              <option value="other">Other</option>
+                            </select>
+
+                            {newActivity.transport_type === 'flight' && (
+                              <input
+                                type="text"
+                                placeholder="Flight number (e.g., AA1234)"
+                                value={newActivity.flight_number}
+                                onChange={(e) => setNewActivity({ ...newActivity, flight_number: e.target.value })}
+                                style={{
+                                  width: '100%',
+                                  padding: '0.75rem',
+                                  marginBottom: '0.75rem',
+                                  borderRadius: '8px',
+                                  border: 'none',
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  color: 'white',
+                                  fontSize: '1rem'
+                                }}
+                              />
+                            )}
+                          </>
+                        )}
+
+                        <input
+                          type="text"
+                          placeholder="Booking reference (optional)"
+                          value={newActivity.booking_reference}
+                          onChange={(e) => setNewActivity({ ...newActivity, booking_reference: e.target.value })}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginBottom: '0.75rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '1rem'
+                          }}
+                        />
+
+                        <textarea
+                          placeholder="Notes (optional)"
+                          value={newActivity.notes}
+                          onChange={(e) => setNewActivity({ ...newActivity, notes: e.target.value })}
+                          rows={2}
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            marginBottom: '0.75rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            color: 'white',
+                            fontSize: '1rem',
+                            resize: 'none'
+                          }}
+                        />
+
+                        <button
+                          type="submit"
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            borderRadius: '8px',
+                            border: 'none',
+                            background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                            color: '#2D1B4E',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            fontSize: '1rem'
+                          }}
+                        >
+                          Add Activity
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
