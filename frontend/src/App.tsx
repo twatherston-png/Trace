@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard'
 import TripList from './pages/TripList'
 import TripOverview from './pages/TripOverview'
 import PhotosGallery from './pages/PhotosGallery'
+import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import './index.css'
 
 function App() {
@@ -40,6 +42,8 @@ function App() {
         <Route path="/trips" element={<TripList />} />
         <Route path="/trips/:tripId" element={<TripOverview />} />
         <Route path="/photos" element={<PhotosGallery />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

@@ -15,7 +15,7 @@ export default function BottomNav() {
     border: 'none',
     color: active ? '#D4AF37' : 'white',
     cursor: 'pointer',
-    fontSize: '0.8rem',
+    fontSize: '0.7rem',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -37,16 +37,24 @@ export default function BottomNav() {
       zIndex: 100
     }}>
       <button onClick={() => navigate('/')} style={buttonStyle(path === '/')}>
-        <span style={{ fontSize: '1.5rem' }}>🏠</span>
+        <span style={{ fontSize: '1.3rem' }}>🏠</span>
         Home
       </button>
       <button onClick={() => navigate('/trips')} style={buttonStyle(isActive('/trips'))}>
-        <span style={{ fontSize: '1.5rem' }}>✈️</span>
+        <span style={{ fontSize: '1.3rem' }}>✈️</span>
         Trips
       </button>
       <button onClick={() => navigate('/photos')} style={buttonStyle(path === '/photos')}>
-        <span style={{ fontSize: '1.5rem' }}>📸</span>
+        <span style={{ fontSize: '1.3rem' }}>📸</span>
         Photos
+      </button>
+      <button onClick={() => navigate('/profile')} style={buttonStyle(path === '/profile')}>
+        <span style={{ fontSize: '1.3rem' }}>👤</span>
+        Profile
+      </button>
+      <button onClick={() => navigate('/settings')} style={buttonStyle(path === '/settings')}>
+        <span style={{ fontSize: '1.3rem' }}>⚙️</span>
+        Settings
       </button>
     </div>
   )

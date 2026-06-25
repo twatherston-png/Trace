@@ -56,11 +56,6 @@ export default function Dashboard() {
     }
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.reload()
-  }
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -69,22 +64,7 @@ export default function Dashboard() {
       paddingTop: '72px',
       paddingBottom: '80px'
     }}>
-      <TopBar title="Trace" rightContent={
-        <button
-          onClick={handleSignOut}
-          style={{
-            padding: '0.4rem 0.8rem',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            background: 'transparent',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '0.85rem'
-          }}
-        >
-          Sign Out
-        </button>
-      } />
+      <TopBar title="Trace" />
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 
         {/* Stats */}
