@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import type { Trip } from '../types'
+import TopBar from '../components/TopBar'
+import BottomNav from '../components/BottomNav'
 
 export default function TripList() {
   const [trips, setTrips] = useState<Trip[]>([])
@@ -136,16 +138,18 @@ export default function TripList() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #2D1B4E 0%, #4A2D6B 100%)',
+      background: '#000000',
       padding: '1rem',
+      paddingTop: '72px',
       paddingBottom: '80px'
     }}>
+      <TopBar title="My Trips" />
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
         {/* Notification */}
         {notification && (
           <div style={{
             position: 'fixed',
-            top: '1rem',
+            top: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
             background: notification.type === 'success' ? '#4CAF50' : '#f44336',
@@ -158,29 +162,6 @@ export default function TripList() {
             {notification.message}
           </div>
         )}
-
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-          paddingTop: '1rem'
-        }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>My Trips</h1>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              background: 'transparent',
-              color: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            Back
-          </button>
-        </div>
 
         {/* Upload Photos Button */}
         <input
@@ -397,69 +378,7 @@ export default function TripList() {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'rgba(45, 27, 78, 0.95)',
-        backdropFilter: 'blur(10px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-        display: 'flex',
-        justifyContent: 'space-around',
-        padding: '1rem',
-        paddingBottom: '1.5rem'
-      }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-          <span style={{ fontSize: '1.5rem' }}>🏠</span>
-          Home
-        </button>
-        <button
-          onClick={() => navigate('/trips')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#D4AF37',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-          <span style={{ fontSize: '1.5rem' }}>✈️</span>
-          Trips
-        </button>
-        <button
-          onClick={() => navigate('/photos')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-          <span style={{ fontSize: '1.5rem' }}>📸</span>
-          Photos
-        </button>
-      </div>
+      <BottomNav />
     </div>
   )
 }

@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Trip, Day, Photo, JournalEntry } from '../types'
+import TopBar from '../components/TopBar'
+import BottomNav from '../components/BottomNav'
+import ActionMenu from '../components/ActionMenu'
 
 export default function TripOverview() {
   const { tripId } = useParams()
@@ -223,7 +226,7 @@ export default function TripOverview() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(180deg, #2D1B4E 0%, #4A2D6B 100%)',
+        background: '#000000',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
@@ -236,16 +239,27 @@ export default function TripOverview() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(180deg, #2D1B4E 0%, #4A2D6B 100%)',
+      background: '#000000',
       padding: '1rem',
+      paddingTop: '72px',
       paddingBottom: '80px'
     }}>
+      <TopBar
+        title={trip.name}
+        showBack
+        onBack={() => navigate('/trips')}
+        rightContent={
+          <ActionMenu actions={[
+            { label: '🗑️ Delete Trip', onClick: handleDeleteTrip, danger: true }
+          ]} />
+        }
+      />
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
         {/* Notification */}
         {notification && (
           <div style={{
             position: 'fixed',
-            top: '1rem',
+            top: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
             background: notification.type === 'success' ? '#4CAF50' : '#f44336',
@@ -258,30 +272,6 @@ export default function TripOverview() {
             {notification.message}
           </div>
         )}
-
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem',
-          paddingTop: '1rem'
-        }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>{trip.name}</h1>
-          <button
-            onClick={() => navigate('/trips')}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              background: 'transparent',
-              color: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            Back
-          </button>
-        </div>
 
         {/* Trip Info */}
         <div style={{
@@ -300,25 +290,6 @@ export default function TripOverview() {
             <div style={{ opacity: 0.5, fontStyle: 'italic' }}>No trip details yet</div>
           )}
         </div>
-
-        {/* Delete Trip Button */}
-        <button
-          onClick={handleDeleteTrip}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            marginBottom: '1.5rem',
-            borderRadius: '12px',
-            border: '1px solid rgba(244, 67, 54, 0.5)',
-            background: 'rgba(244, 67, 54, 0.1)',
-            color: '#f44336',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            fontSize: '0.9rem'
-          }}
-        >
-          🗑️ Delete Trip
-        </button>
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -548,27 +519,12 @@ export default function TripOverview() {
                       e.currentTarget.style.display = 'none'
                     }}
                   />
-                  <button
-                    onClick={() => handleDeletePhoto(photo.id, photo.url)}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'rgba(244, 67, 54, 0.8)',
-                      color: 'white',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ×
-                  </button>
+                  <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                    <ActionMenu actions={[
+                      { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
+                    ]}
+                  />
+                  </div>
                 </div>
               ))}
             </div>
@@ -600,27 +556,12 @@ export default function TripOverview() {
                     padding: '1.5rem'
                   }}
                 >
-                  <button
-                    onClick={() => handleDeleteJournal(entry.id)}
-                    style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      border: 'none',
-                      background: 'rgba(244, 67, 54, 0.8)',
-                      color: 'white',
-                      fontSize: '16px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ×
-                  </button>
+                  <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+                    <ActionMenu actions={[
+                      { label: '🗑️ Delete Entry', onClick: () => handleDeleteJournal(entry.id), danger: true }
+                    ]}
+                  />
+                  </div>
                   <div style={{
                     fontSize: '0.9rem',
                     opacity: 0.7,
@@ -669,69 +610,7 @@ export default function TripOverview() {
         </div>
       )}
 
-      {/* Bottom Navigation */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'rgba(45, 27, 78, 0.95)',
-        backdropFilter: 'blur(10px)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-        display: 'flex',
-        justifyContent: 'space-around',
-        padding: '1rem',
-        paddingBottom: '1.5rem'
-      }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-          <span style={{ fontSize: '1.5rem' }}>🏠</span>
-          Home
-        </button>
-        <button
-          onClick={() => navigate('/trips')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#D4AF37',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-          <span style={{ fontSize: '1.5rem' }}>✈️</span>
-          Trips
-        </button>
-        <button
-          onClick={() => navigate('/photos')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '0.8rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
-          <span style={{ fontSize: '1.5rem' }}>📸</span>
-          Photos
-        </button>
-      </div>
+      <BottomNav />
     </div>
   )
 }
