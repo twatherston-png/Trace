@@ -31,7 +31,7 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
     if (!open && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setMenuPos({
-        top: rect.bottom + window.scrollY,
+        top: rect.bottom,
         right: window.innerWidth - rect.right
       })
     }
