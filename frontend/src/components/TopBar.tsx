@@ -38,9 +38,10 @@ export default function TopBar({ title, subtitle, showBack, onBack, rightContent
           src="/wordmark-transparent.png"
           alt="Trace"
           style={{
-            height: '60px',
+            height: '72px',
             width: 'auto',
-            objectFit: 'contain'
+            objectFit: 'contain',
+            marginLeft: '-0.5rem'
           }}
         />
       </div>
