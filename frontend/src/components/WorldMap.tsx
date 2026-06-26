@@ -41,7 +41,7 @@ export default function WorldMap() {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
+      style: 'mapbox://styles/mapbox/dark-v10', // Slightly lighter dark theme
       center: [0, 20],
       zoom: 1.5,
       projection: 'mercator'
@@ -60,13 +60,25 @@ export default function WorldMap() {
   // Load photos with GPS coordinates
   useEffect(() => {
     const loadPhotos = async () => {
-      const { data: photos } = await supabase
+      console.log('WorldMap: Loading photos with GPS coordinates...')
+      
+      const { data: photos, error } = await supabase
         .from('photos')
-        .select('id, url, latitude, longitude, trip_id')
+        .select('id, url, latitude, longitude, location, trip_id')
         .not('latitude', 'is', null)
         .not('longitude', 'is', null)
 
-      if (!photos || photos.length === 0) return
+      if (error) {
+        console.error('WorldMap: Error loading photos:', error)
+        return
+      }
+
+      console.log(`WorldMap: Found ${photos?.length || 0} photos with GPS coordinates`)
+
+      if (!photos || photos.length === 0) {
+        console.log('WorldMap: No photos with GPS coordinates found')
+        return
+      }
 
       // Check which photos already have city/country data cached
       const photoIds = photos.map(p => p.id)
@@ -274,7 +286,7 @@ export default function WorldMap() {
         ref={mapContainer} 
         style={{ 
           width: '100%', 
-          height: '500px', 
+          height: '400px', 
           borderRadius: '16px',
           overflow: 'hidden'
         }} 
