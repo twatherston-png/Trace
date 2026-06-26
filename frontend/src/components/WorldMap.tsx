@@ -9,6 +9,7 @@ interface PhotoLocation {
   latitude: number
   longitude: number
   trip_id?: string
+  location?: string
   city?: string
   country?: string
 }
@@ -63,11 +64,11 @@ export default function WorldMap() {
     const loadPhotos = async () => {
       setStatus('Loading photos...')
       
+      // Get photos with either GPS coordinates OR location text
       const { data: photos, error } = await supabase
         .from('photos')
         .select('id, url, latitude, longitude, location, trip_id')
-        .not('latitude', 'is', null)
-        .not('longitude', 'is', null)
+        .or('latitude.not.is.null,location.not.is.null')
 
       if (error) {
         console.error('WorldMap: Error loading photos:', error)
@@ -76,23 +77,23 @@ export default function WorldMap() {
       }
 
       if (!photos || photos.length === 0) {
-        setStatus('No photos with GPS data found')
+        setStatus('No photos with location data found')
         return
       }
 
-      setStatus(`Found ${photos.length} photos with GPS`)
+      setStatus(`Processing ${photos.length} photos...`)
 
       // Check which photos already have city/country data cached
       const photoIds = photos.map(p => p.id)
       const { data: cachedLocations } = await supabase
         .from('photo_locations')
-        .select('photo_id, city, country')
+        .select('photo_id, city, country, latitude, longitude')
         .in('photo_id', photoIds)
 
       const cachedMap = new Map()
       if (cachedLocations) {
         cachedLocations.forEach(loc => {
-          cachedMap.set(loc.photo_id, { city: loc.city, country: loc.country })
+          cachedMap.set(loc.photo_id, loc)
         })
       }
 
@@ -105,6 +106,8 @@ export default function WorldMap() {
         if (cached && cached.city && cached.country) {
           photoLocations.push({
             ...photo,
+            latitude: cached.latitude,
+            longitude: cached.longitude,
             city: cached.city,
             country: cached.country
           })
@@ -113,36 +116,68 @@ export default function WorldMap() {
         }
       })
 
+      setStatus(`Geocoding ${needsGeocoding.length} locations...`)
+
       // Geocode photos that don't have city/country data
       for (const photo of needsGeocoding) {
         try {
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${photo.longitude},${photo.latitude}.json?access_token=${mapboxgl.accessToken}&limit=1`
-          )
-          const data = await response.json()
+          let lat = photo.latitude
+          let lng = photo.longitude
+          let city = ''
+          let country = ''
 
-          if (data.features && data.features.length > 0) {
-            const feature = data.features[0]
-            const context = feature.context || []
-            
-            // Find city and country from context
-            const cityContext = context.find((c: any) => c.id.startsWith('place.'))
-            const countryContext = context.find((c: any) => c.id.startsWith('country.'))
-            
-            const city = cityContext?.text || 'Unknown'
-            const country = countryContext?.text || 'Unknown'
+          if (lat && lng) {
+            // Has GPS, reverse geocode to get city/country
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
 
+            if (data.features && data.features.length > 0) {
+              const feature = data.features[0]
+              const context = feature.context || []
+              
+              // Find city and country from context
+              const cityContext = context.find((c: any) => c.id.startsWith('place.'))
+              const countryContext = context.find((c: any) => c.id.startsWith('country.'))
+              
+              city = cityContext?.text || 'Unknown'
+              country = countryContext?.text || 'Unknown'
+            }
+          } else if (photo.location) {
+            // Has text location, forward geocode to get coordinates
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(photo.location)}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
+
+            if (data.features && data.features.length > 0) {
+              const feature = data.features[0]
+              ;[lng, lat] = feature.center
+              
+              const context = feature.context || []
+              const cityContext = context.find((c: any) => c.id.startsWith('place.'))
+              const countryContext = context.find((c: any) => c.id.startsWith('country.'))
+              
+              city = cityContext?.text || feature.text || photo.location
+              country = countryContext?.text || 'Unknown'
+            }
+          }
+
+          if (city && country && lat && lng) {
             // Cache in database
             await supabase.from('photo_locations').upsert({
               photo_id: photo.id,
               city,
               country,
-              latitude: photo.latitude,
-              longitude: photo.longitude
+              latitude: lat,
+              longitude: lng
             }, { onConflict: 'photo_id' })
 
             photoLocations.push({
               ...photo,
+              latitude: lat,
+              longitude: lng,
               city,
               country
             })
