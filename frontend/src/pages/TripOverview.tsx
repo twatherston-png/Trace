@@ -852,22 +852,23 @@ export default function TripOverview() {
                     setSelectedPhoto(photos[prevIndex])
                   }}
                   style={{
-                    position: 'absolute',
-                    left: '-60px',
+                    position: 'fixed',
+                    left: '20px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
+                    width: '44px',
+                    height: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     color: 'white',
-                    fontSize: '1.2rem',
-                    transition: 'all 0.2s ease'
+                    fontSize: '1.3rem',
+                    transition: 'all 0.2s ease',
+                    zIndex: 2001
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
@@ -886,22 +887,23 @@ export default function TripOverview() {
                     setSelectedPhoto(photos[nextIndex])
                   }}
                   style={{
-                    position: 'absolute',
-                    right: '-60px',
+                    position: 'fixed',
+                    right: '20px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     background: 'rgba(255, 255, 255, 0.1)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
+                    width: '44px',
+                    height: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     color: 'white',
-                    fontSize: '1.2rem',
-                    transition: 'all 0.2s ease'
+                    fontSize: '1.3rem',
+                    transition: 'all 0.2s ease',
+                    zIndex: 2001
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
@@ -960,9 +962,10 @@ export default function TripOverview() {
             <h3 style={{
               color: 'white',
               marginBottom: '1.25rem',
-              fontSize: '1.2rem',
+              fontSize: '0.8rem',
               fontWeight: 600,
-              letterSpacing: '-0.01em'
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
             }}>
               Edit Journal Entry
             </h3>
@@ -1120,8 +1123,10 @@ export default function TripOverview() {
             <h3 style={{
               color: 'white',
               marginBottom: '1.25rem',
-              fontSize: '1.2rem',
-              fontWeight: 600
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
             }}>
               Apply Metadata to {uploadedPhotoIds.length} Photo{uploadedPhotoIds.length !== 1 ? 's' : ''}
             </h3>

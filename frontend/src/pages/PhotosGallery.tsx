@@ -666,9 +666,10 @@ export default function PhotosGallery() {
             <h3 style={{
               color: 'white',
               marginBottom: '1.25rem',
-              fontSize: '1.2rem',
+              fontSize: '0.8rem',
               fontWeight: 600,
-              letterSpacing: '-0.01em'
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
             }}>
               Edit Photo Details
             </h3>
@@ -899,8 +900,10 @@ export default function PhotosGallery() {
             <h3 style={{
               color: 'white',
               marginBottom: '0.5rem',
-              fontSize: '1.2rem',
-              fontWeight: 600
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
             }}>
               Edit {selectedPhotos.size} Photos
             </h3>

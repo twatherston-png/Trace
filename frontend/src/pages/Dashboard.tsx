@@ -280,11 +280,12 @@ export default function Dashboard() {
         {/* Recent Trips */}
         <div>
           <h2 style={{
-            fontSize: '1.1rem',
+            fontSize: '0.8rem',
             fontWeight: 600,
-            marginBottom: '1rem',
-            color: 'rgba(255, 255, 255, 0.9)',
-            letterSpacing: '-0.01em'
+            marginBottom: '0.75rem',
+            color: 'rgba(212, 175, 55, 0.7)',
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase'
           }}>
             Recent Trips
           </h2>
