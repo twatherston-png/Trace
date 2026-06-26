@@ -300,19 +300,34 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
 
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Itinerary</h2>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '0.75rem',
+        paddingBottom: '0.5rem',
+        borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
+      }}>
+        <h2 style={{
+          fontSize: '0.8rem',
+          fontWeight: 600,
+          color: 'rgba(212, 175, 55, 0.7)',
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+          margin: 0
+        }}>Itinerary</h2>
         <button
           onClick={() => setShowAddDay(!showAddDay)}
           style={{
-            padding: '0.5rem 1rem',
+            padding: '0.35rem 0.75rem',
             borderRadius: '8px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
-            color: 'white',
-            fontWeight: 'bold',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(229, 196, 88, 0.08) 100%)',
+            color: '#D4AF37',
+            fontWeight: 600,
             cursor: 'pointer',
-            fontSize: '0.9rem'
+            fontSize: '0.75rem',
+            letterSpacing: '0.02em'
           }}
         >
           {showAddDay ? 'Cancel' : '+ Add Day'}
@@ -434,27 +449,34 @@ export default function Itinerary({ tripId, tripStartDate, tripEndDate }: Itiner
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
                       <span style={{ 
-                        fontSize: '0.8rem', 
+                        fontSize: '0.7rem', 
                         transition: 'transform 0.2s',
                         transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                        display: 'inline-block'
+                        display: 'inline-block',
+                        color: 'rgba(212, 175, 55, 0.6)'
                       }}>
                         ▶
                       </span>
-                      <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>
+                      <span style={{ 
+                        fontSize: '0.85rem', 
+                        fontWeight: 600,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        color: 'rgba(255, 255, 255, 0.9)'
+                      }}>
                         {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </span>
                       {day.location && (
-                        <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>📍 {day.location}</span>
+                        <span style={{ fontSize: '0.8rem', color: 'rgba(212, 175, 55, 0.6)' }}>📍 {day.location}</span>
                       )}
                     </div>
                     {!isExpanded && (
-                      <div style={{ fontSize: '0.85rem', opacity: 0.6, marginLeft: '1.5rem' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.5)', marginLeft: '1.5rem' }}>
                         {getDaySummary(day.id)}
                       </div>
                     )}
                     {isExpanded && day.notes && (
-                      <div style={{ fontSize: '0.9rem', opacity: 0.8, marginLeft: '1.5rem' }}>{day.notes}</div>
+                      <div style={{ fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)', marginLeft: '1.5rem' }}>{day.notes}</div>
                     )}
                   </div>
                   <div onClick={(e) => e.stopPropagation()}>

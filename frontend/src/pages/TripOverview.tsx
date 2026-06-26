@@ -30,6 +30,8 @@ export default function TripOverview() {
   const [bulkDate, setBulkDate] = useState('')
   const [bulkLocation, setBulkLocation] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [editingJournal, setEditingJournal] = useState<JournalEntry | null>(null)
+  const [editJournalData, setEditJournalData] = useState({ date: '', location: '', content: '' })
 
   useEffect(() => {
     if (tripId) loadTripData()
@@ -332,6 +334,38 @@ export default function TripOverview() {
     }
   }
 
+  const handleEditJournal = (entry: JournalEntry) => {
+    setEditingJournal(entry)
+    setEditJournalData({
+      date: entry.date || '',
+      location: entry.location || '',
+      content: entry.content
+    })
+  }
+
+  const handleSaveJournalEdit = async () => {
+    if (!editingJournal) return
+
+    const { error } = await supabase
+      .from('journal_entries')
+      .update({
+        date: editJournalData.date || null,
+        location: editJournalData.location || null,
+        content: editJournalData.content
+      })
+      .eq('id', editingJournal.id)
+
+    if (error) {
+      console.error('Error updating journal:', error)
+      setNotification({ type: 'error', message: `Failed to update journal: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Journal entry updated!' })
+      setEditingJournal(null)
+      setEditJournalData({ date: '', location: '', content: '' })
+      loadTripData()
+    }
+  }
+
   const handleDeleteTrip = async () => {
     if (!confirm('Delete this entire trip? This will delete all photos, journal entries, and activities.')) return
     if (!tripId) return
@@ -447,77 +481,31 @@ export default function TripOverview() {
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handlePhotoUpload}
-            multiple
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="gold-glow"
-            style={{
-              flex: 1,
-              padding: '1.1rem',
-              borderRadius: '16px',
-              border: '1px solid rgba(212, 175, 55, 0.2)',
-              background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.8) 0%, rgba(107, 77, 142, 0.8) 100%)',
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              fontWeight: 600,
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              fontSize: '0.95rem',
-              opacity: uploading ? 0.7 : 1,
-              transition: 'all 0.3s ease',
-              letterSpacing: '0.02em'
-            }}
-          >
-            {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : '+ Photos'}
-          </button>
-          <button
-            onClick={() => setShowJournalForm(!showJournalForm)}
-            className="gold-glow"
-            style={{
-              flex: 1,
-              padding: '1.1rem',
-              borderRadius: '16px',
-              border: '1px solid rgba(212, 175, 55, 0.2)',
-              background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.8) 0%, rgba(107, 77, 142, 0.8) 100%)',
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '0.95rem',
-              transition: 'all 0.3s ease',
-              letterSpacing: '0.02em'
-            }}
-          >
-            {showJournalForm ? 'Cancel' : '+ Journal'}
-          </button>
-        </div>
+        {/* Hidden file input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handlePhotoUpload}
+          multiple
+          accept="image/*"
+          style={{ display: 'none' }}
+        />
 
         {/* Upload Progress Bar */}
         {uploading && (
           <div style={{
             width: '100%',
-            height: '6px',
-            background: 'rgba(255, 255, 255, 0.06)',
-            borderRadius: '3px',
-            marginBottom: '1.5rem',
+            height: '4px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '2px',
+            marginBottom: '1rem',
             overflow: 'hidden'
           }}>
             <div style={{
               width: `${uploadProgress}%`,
               height: '100%',
-              background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 50%, #D4AF37 100%)',
-              borderRadius: '3px',
-              transition: 'width 0.3s ease',
-              boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
+              background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 100%)',
+              transition: 'width 0.3s ease'
             }} />
           </div>
         )}
@@ -611,18 +599,41 @@ export default function TripOverview() {
 
         {/* Photos */}
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: '0.75rem',
-            color: 'rgba(212, 175, 55, 0.7)',
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
             paddingBottom: '0.5rem',
             borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
           }}>
-            Photos
-          </h2>
+            <h2 style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'rgba(212, 175, 55, 0.7)',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              margin: 0
+            }}>Photos</h2>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(212, 175, 55, 0.3)',
+                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(229, 196, 88, 0.08) 100%)',
+                color: '#D4AF37',
+                fontWeight: 600,
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                fontSize: '0.75rem',
+                letterSpacing: '0.02em',
+                opacity: uploading ? 0.5 : 1
+              }}
+            >
+              {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : '+ Add Photos'}
+            </button>
+          </div>
           {photos.length === 0 ? (
             <div className="fade-in glass-card" style={{
               padding: '2.5rem',
@@ -697,18 +708,39 @@ export default function TripOverview() {
 
         {/* Journal Entries */}
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: '0.75rem',
-            color: 'rgba(212, 175, 55, 0.7)',
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
             paddingBottom: '0.5rem',
             borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
           }}>
-            Journal
-          </h2>
+            <h2 style={{
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'rgba(212, 175, 55, 0.7)',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              margin: 0
+            }}>Journal</h2>
+            <button
+              onClick={() => setShowJournalForm(!showJournalForm)}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(212, 175, 55, 0.3)',
+                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(229, 196, 88, 0.08) 100%)',
+                color: '#D4AF37',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                letterSpacing: '0.02em'
+              }}
+            >
+              {showJournalForm ? 'Cancel' : '+ Add Entry'}
+            </button>
+          </div>
           {journalEntries.length === 0 ? (
             <div className="fade-in glass-card" style={{
               padding: '2.5rem',
@@ -730,6 +762,7 @@ export default function TripOverview() {
                 >
                   <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
                     <ActionMenu actions={[
+                      { label: '✏️ Edit Entry', onClick: () => handleEditJournal(entry) },
                       { label: '🗑️ Delete Entry', onClick: () => handleDeleteJournal(entry.id), danger: true }
                     ]}
                   />
@@ -761,7 +794,7 @@ export default function TripOverview() {
         )}
       </div>
 
-      {/* Photo Lightbox */}
+      {/* Photo Lightbox with Swipe */}
       {selectedPhoto && (
         <div
           onClick={() => setSelectedPhoto(null)}
@@ -781,7 +814,10 @@ export default function TripOverview() {
             padding: '1rem'
           }}
         >
-          <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}
+          >
             <img
               src={selectedPhoto.url}
               alt={selectedPhoto.caption || 'Photo'}
@@ -805,6 +841,238 @@ export default function TripOverview() {
                 {selectedPhoto.caption}
               </div>
             )}
+            {/* Navigation arrows */}
+            {photos.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
+                    const prevIndex = (currentIndex - 1 + photos.length) % photos.length
+                    setSelectedPhoto(photos[prevIndex])
+                  }}
+                  style={{
+                    position: 'absolute',
+                    left: '-60px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'white',
+                    fontSize: '1.2rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  ←
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
+                    const nextIndex = (currentIndex + 1) % photos.length
+                    setSelectedPhoto(photos[nextIndex])
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '-60px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'white',
+                    fontSize: '1.2rem',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  →
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Journal Edit Modal */}
+      {editingJournal && (
+        <div
+          onClick={() => {
+            setEditingJournal(null)
+            setEditJournalData({ date: '', location: '', content: '' })
+          }}
+          className="fade-in"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1rem',
+            overflowY: 'auto',
+            paddingTop: '60px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(45, 27, 78, 0.9)',
+              backdropFilter: 'blur(30px)',
+              WebkitBackdropFilter: 'blur(30px)',
+              borderRadius: '24px',
+              padding: '1.75rem',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <h3 style={{
+              color: 'white',
+              marginBottom: '1.25rem',
+              fontSize: '1.2rem',
+              fontWeight: 600,
+              letterSpacing: '-0.01em'
+            }}>
+              Edit Journal Entry
+            </h3>
+
+            {/* Date */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Date
+            </label>
+            <input
+              type="date"
+              value={editJournalData.date}
+              onChange={(e) => setEditJournalData({ ...editJournalData, date: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Location */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Location
+            </label>
+            <input
+              type="text"
+              value={editJournalData.location}
+              onChange={(e) => setEditJournalData({ ...editJournalData, location: e.target.value })}
+              placeholder="e.g. Lima, Peru"
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Content */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Entry
+            </label>
+            <textarea
+              value={editJournalData.content}
+              onChange={(e) => setEditJournalData({ ...editJournalData, content: e.target.value })}
+              rows={6}
+              className="journal-text"
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                marginBottom: '1.5rem',
+                resize: 'vertical',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setEditingJournal(null)
+                  setEditJournalData({ date: '', location: '', content: '' })
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.9rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveJournalEdit}
+                className="gold-glow"
+                style={{
+                  flex: 1,
+                  padding: '0.9rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                  color: '#1A0E2E',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  transition: 'all 0.3s ease',
+                  letterSpacing: '0.02em'
+                }}
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}
