@@ -354,12 +354,11 @@ export default function TripOverview() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: '#000000',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
       }}>
-        <div style={{ color: 'white', fontSize: '1.2rem' }}>Loading trip...</div>
+        <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '1.1rem' }}>Loading trip...</div>
       </div>
     )
   }
@@ -367,15 +366,14 @@ export default function TripOverview() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#000000',
-      padding: '1rem',
-      paddingTop: '72px',
-      paddingBottom: '80px'
+      padding: '1.25rem',
+      paddingTop: '76px',
+      paddingBottom: '86px'
     }}>
       <TopBar
         title={trip.name}
         subtitle={trip.start_date && trip.end_date 
-          ? `${new Date(trip.start_date).toLocaleDateString()} - ${new Date(trip.end_date).toLocaleDateString()}`
+          ? `${new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
           : ''}
         showBack
         onBack={() => navigate('/trips')}
@@ -388,50 +386,69 @@ export default function TripOverview() {
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
         {/* Notification */}
         {notification && (
-          <div style={{
+          <div className="fade-in" style={{
             position: 'fixed',
             top: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: notification.type === 'success' ? '#4CAF50' : '#f44336',
+            background: notification.type === 'success'
+              ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.95) 0%, rgba(56, 142, 60, 0.95) 100%)'
+              : 'linear-gradient(135deg, rgba(244, 67, 54, 0.95) 0%, rgba(211, 47, 47, 0.95) 100%)',
             color: 'white',
             padding: '1rem 2rem',
-            borderRadius: '8px',
+            borderRadius: '16px',
             zIndex: 1000,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            fontWeight: 500
           }}>
             {notification.message}
           </div>
         )}
 
         {/* Trip Info */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px',
+        <div className="fade-in glass-card" style={{
           padding: '1.5rem',
           marginBottom: '1.5rem'
         }}>
           {trip.cover_photo_url && (
-            <img
-              src={trip.cover_photo_url}
-              alt={trip.name}
-              style={{
-                width: '100%',
-                height: '200px',
-                objectFit: 'cover',
-                borderRadius: '8px',
-                marginBottom: '1rem'
-              }}
-            />
+            <div className="photo-frame" style={{ marginBottom: '1rem' }}>
+              <img
+                src={trip.cover_photo_url}
+                alt={trip.name}
+                style={{
+                  width: '100%',
+                  height: '200px',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
+              />
+            </div>
           )}
-          {trip.notes && <div style={{ opacity: 0.8 }}>{trip.notes}</div>}
+          {trip.notes && (
+            <div style={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              lineHeight: 1.6,
+              fontSize: '0.95rem'
+            }}>
+              {trip.notes}
+            </div>
+          )}
           {!trip.notes && !trip.cover_photo_url && (
-            <div style={{ opacity: 0.5, fontStyle: 'italic' }}>No trip details yet</div>
+            <div style={{
+              opacity: 0.4,
+              fontStyle: 'italic',
+              textAlign: 'center',
+              padding: '1rem 0'
+            }}>
+              No trip details yet
+            </div>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <input
             type="file"
             ref={fileInputRef}
@@ -443,33 +460,41 @@ export default function TripOverview() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
+            className="gold-glow"
             style={{
               flex: 1,
-              padding: '1rem',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
+              padding: '1.1rem',
+              borderRadius: '16px',
+              border: '1px solid rgba(212, 175, 55, 0.2)',
+              background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.8) 0%, rgba(107, 77, 142, 0.8) 100%)',
+              backdropFilter: 'blur(10px)',
               color: 'white',
-              fontWeight: 'bold',
+              fontWeight: 600,
               cursor: uploading ? 'not-allowed' : 'pointer',
-              fontSize: '1rem',
-              opacity: uploading ? 0.7 : 1
+              fontSize: '0.95rem',
+              opacity: uploading ? 0.7 : 1,
+              transition: 'all 0.3s ease',
+              letterSpacing: '0.02em'
             }}
           >
             {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : '+ Photos'}
           </button>
           <button
             onClick={() => setShowJournalForm(!showJournalForm)}
+            className="gold-glow"
             style={{
               flex: 1,
-              padding: '1rem',
-              borderRadius: '12px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
+              padding: '1.1rem',
+              borderRadius: '16px',
+              border: '1px solid rgba(212, 175, 55, 0.2)',
+              background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.8) 0%, rgba(107, 77, 142, 0.8) 100%)',
+              backdropFilter: 'blur(10px)',
               color: 'white',
-              fontWeight: 'bold',
+              fontWeight: 600,
               cursor: 'pointer',
-              fontSize: '1rem'
+              fontSize: '0.95rem',
+              transition: 'all 0.3s ease',
+              letterSpacing: '0.02em'
             }}
           >
             {showJournalForm ? 'Cancel' : '+ Journal'}
@@ -480,28 +505,34 @@ export default function TripOverview() {
         {uploading && (
           <div style={{
             width: '100%',
-            height: '8px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '4px',
+            height: '6px',
+            background: 'rgba(255, 255, 255, 0.06)',
+            borderRadius: '3px',
             marginBottom: '1.5rem',
             overflow: 'hidden'
           }}>
             <div style={{
               width: `${uploadProgress}%`,
               height: '100%',
-              background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 100%)',
-              transition: 'width 0.3s ease'
+              background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 50%, #D4AF37 100%)',
+              borderRadius: '3px',
+              transition: 'width 0.3s ease',
+              boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
             }} />
           </div>
         )}
 
         {/* Journal Entry Form */}
         {showJournalForm && (
-          <form onSubmit={handleAddJournal} style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            marginBottom: '2rem'
+          <form onSubmit={handleAddJournal} className="fade-in" style={{
+            background: 'rgba(45, 27, 78, 0.6)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: '1.75rem',
+            marginBottom: '2rem',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
           }}>
             <input
               type="date"
@@ -509,13 +540,14 @@ export default function TripOverview() {
               onChange={(e) => setNewJournal({ ...newJournal, date: e.target.value })}
               style={{
                 width: '100%',
-                padding: '0.75rem',
+                padding: '0.9rem 1rem',
                 marginBottom: '1rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
-                fontSize: '1rem'
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
               }}
             />
             <input
@@ -525,13 +557,14 @@ export default function TripOverview() {
               onChange={(e) => setNewJournal({ ...newJournal, location: e.target.value })}
               style={{
                 width: '100%',
-                padding: '0.75rem',
+                padding: '0.9rem 1rem',
                 marginBottom: '1rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
-                fontSize: '1rem'
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
               }}
             />
             <textarea
@@ -540,30 +573,35 @@ export default function TripOverview() {
               onChange={(e) => setNewJournal({ ...newJournal, content: e.target.value })}
               required
               rows={4}
+              className="journal-text"
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                marginBottom: '1rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'rgba(255, 255, 255, 0.1)',
-                color: 'white',
+                padding: '0.9rem 1rem',
+                marginBottom: '1.25rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 fontSize: '1rem',
-                resize: 'none'
+                resize: 'none',
+                transition: 'all 0.3s ease'
               }}
             />
             <button
               type="submit"
+              className="gold-glow"
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
+                padding: '1rem',
+                borderRadius: '12px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                color: '#2D1B4E',
-                fontWeight: 'bold',
+                color: '#1A0E2E',
+                fontWeight: 700,
                 cursor: 'pointer',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                transition: 'all 0.3s ease',
+                letterSpacing: '0.02em'
               }}
             >
               Add Journal Entry
@@ -573,38 +611,47 @@ export default function TripOverview() {
 
         {/* Photos */}
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Photos</h2>
+          <h2 style={{
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            marginBottom: '0.75rem',
+            color: 'rgba(212, 175, 55, 0.7)',
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            paddingBottom: '0.5rem',
+            borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
+          }}>
+            Photos
+          </h2>
           {photos.length === 0 ? (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              padding: '2rem',
-              textAlign: 'center',
-              opacity: 0.7
+            <div className="fade-in glass-card" style={{
+              padding: '2.5rem',
+              textAlign: 'center'
             }}>
-              No photos yet
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', opacity: 0.6 }}>📸</div>
+              <p style={{ opacity: 0.5, fontSize: '0.9rem' }}>No photos yet</p>
             </div>
           ) : (
             <div style={{
               display: 'flex',
               overflowX: 'auto',
-              gap: '0.5rem',
+              gap: '0.75rem',
               paddingBottom: '0.5rem'
             }}>
               {Array.from({ length: Math.ceil(photos.length / 2) }, (_, i) => {
                 const columnPhotos = photos.slice(i * 2, i * 2 + 2)
                 return (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flexShrink: 0 }}>
                     {columnPhotos.map(photo => (
                       <div
                         key={photo.id}
+                        className="photo-frame"
                         style={{
                           position: 'relative',
                           width: '120px',
                           height: '120px',
-                          borderRadius: '8px',
-                          overflow: 'hidden',
-                          background: 'rgba(255, 255, 255, 0.1)'
+                          borderRadius: '12px',
+                          overflow: 'hidden'
                         }}
                       >
                         <img
@@ -615,8 +662,11 @@ export default function TripOverview() {
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            transition: 'transform 0.3s ease'
                           }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                           onError={(e) => {
                             console.error('Image failed to load:', photo.url)
                             e.currentTarget.style.display = 'none'
@@ -647,26 +697,34 @@ export default function TripOverview() {
 
         {/* Journal Entries */}
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Journal</h2>
+          <h2 style={{
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            marginBottom: '0.75rem',
+            color: 'rgba(212, 175, 55, 0.7)',
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            paddingBottom: '0.5rem',
+            borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
+          }}>
+            Journal
+          </h2>
           {journalEntries.length === 0 ? (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              padding: '2rem',
-              textAlign: 'center',
-              opacity: 0.7
+            <div className="fade-in glass-card" style={{
+              padding: '2.5rem',
+              textAlign: 'center'
             }}>
-              No journal entries yet
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', opacity: 0.6 }}>📝</div>
+              <p style={{ opacity: 0.5, fontSize: '0.9rem' }}>No journal entries yet</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {journalEntries.map(entry => (
                 <div
                   key={entry.id}
+                  className="fade-in glass-card"
                   style={{
                     position: 'relative',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
                     padding: '1.5rem'
                   }}
                 >
@@ -677,14 +735,16 @@ export default function TripOverview() {
                   />
                   </div>
                   <div style={{
-                    fontSize: '0.9rem',
-                    opacity: 0.7,
-                    marginBottom: '0.5rem'
+                    fontSize: '0.8rem',
+                    color: 'rgba(212, 175, 55, 0.7)',
+                    fontWeight: 500,
+                    marginBottom: '0.5rem',
+                    letterSpacing: '0.02em'
                   }}>
-                    {entry.date ? new Date(entry.date).toLocaleDateString() : 'No date'}
+                    {entry.date ? new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date'}
                     {entry.location && ` • ${entry.location}`}
                   </div>
-                  <div style={{ lineHeight: '1.6' }}>
+                  <div className="journal-text">
                     {entry.content}
                   </div>
                 </div>
@@ -701,17 +761,19 @@ export default function TripOverview() {
         )}
       </div>
 
-      {/* Photo Modal */}
+      {/* Photo Lightbox */}
       {selectedPhoto && (
         <div
           onClick={() => setSelectedPhoto(null)}
+          className="fade-in"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
+            background: 'rgba(0, 0, 0, 0.92)',
+            backdropFilter: 'blur(20px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -719,18 +781,35 @@ export default function TripOverview() {
             padding: '1rem'
           }}
         >
-          <img
-            src={selectedPhoto.url}
-            alt={selectedPhoto.caption || 'Photo'}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              borderRadius: '8px'
-            }}
-          />
+          <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
+            <img
+              src={selectedPhoto.url}
+              alt={selectedPhoto.caption || 'Photo'}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '85vh',
+                borderRadius: '12px',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)'
+              }}
+            />
+            {selectedPhoto.caption && (
+              <div style={{
+                position: 'absolute',
+                bottom: '-40px',
+                left: 0,
+                right: 0,
+                textAlign: 'center',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.9rem'
+              }}>
+                {selectedPhoto.caption}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
+      {/* Metadata Modal */}
       {showMetadataModal && (
         <div
           onClick={() => {
@@ -740,13 +819,15 @@ export default function TripOverview() {
             setBulkDate('')
             setBulkLocation('')
           }}
+          className="fade-in"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -757,33 +838,54 @@ export default function TripOverview() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#1a1a1a',
-              borderRadius: '12px',
-              padding: '1.5rem',
+              background: 'rgba(45, 27, 78, 0.9)',
+              backdropFilter: 'blur(30px)',
+              WebkitBackdropFilter: 'blur(30px)',
+              borderRadius: '24px',
+              padding: '1.75rem',
               maxWidth: '500px',
               width: '100%',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
             }}
           >
-            <h3 style={{ color: 'white', marginBottom: '1rem' }}>Apply Metadata to {uploadedPhotoIds.length} Photo{uploadedPhotoIds.length !== 1 ? 's' : ''}</h3>
+            <h3 style={{
+              color: 'white',
+              marginBottom: '1.25rem',
+              fontSize: '1.2rem',
+              fontWeight: 600
+            }}>
+              Apply Metadata to {uploadedPhotoIds.length} Photo{uploadedPhotoIds.length !== 1 ? 's' : ''}
+            </h3>
             
             {extractedExif.date && (
               <button
                 onClick={() => handleApplyMetadata('exif')}
+                className="glass-card"
                 style={{
                   width: '100%',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '1.1rem',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(212, 175, 55, 0.2)',
+                  background: 'rgba(45, 27, 78, 0.6)',
                   color: 'white',
                   cursor: 'pointer',
                   marginBottom: '1rem',
-                  textAlign: 'left'
+                  textAlign: 'left',
+                  transition: 'all 0.3s ease'
                 }}
               >
-                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>📷 Use EXIF Data</div>
-                <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                <div style={{
+                  fontWeight: 600,
+                  marginBottom: '0.5rem',
+                  color: '#D4AF37'
+                }}>
+                  📷 Use EXIF Data
+                </div>
+                <div style={{
+                  fontSize: '0.85rem',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                }}>
                   Date: {extractedExif.date}
                   {extractedExif.latitude && extractedExif.longitude && ` • Location: ${extractedExif.latitude.toFixed(4)}, ${extractedExif.longitude.toFixed(4)}`}
                 </div>
@@ -793,20 +895,28 @@ export default function TripOverview() {
             <button
               onClick={() => handleApplyMetadata('bulk', bulkDate, bulkLocation)}
               disabled={!bulkDate && !bulkLocation}
+              className="glass-card"
               style={{
                 width: '100%',
-                padding: '1rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                background: 'rgba(255, 255, 255, 0.05)',
+                padding: '1.1rem',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(45, 27, 78, 0.6)',
                 color: 'white',
                 cursor: (!bulkDate && !bulkLocation) ? 'not-allowed' : 'pointer',
                 marginBottom: '1rem',
                 textAlign: 'left',
-                opacity: (!bulkDate && !bulkLocation) ? 0.5 : 1
+                opacity: (!bulkDate && !bulkLocation) ? 0.5 : 1,
+                transition: 'all 0.3s ease'
               }}
             >
-              <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>📝 Add Bulk Information</div>
+              <div style={{
+                fontWeight: 600,
+                marginBottom: '0.5rem',
+                color: '#D4AF37'
+              }}>
+                📝 Add Bulk Information
+              </div>
               <input
                 type="date"
                 value={bulkDate}
@@ -814,12 +924,13 @@ export default function TripOverview() {
                 onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
-                  padding: '0.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
                   color: 'white',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.5rem',
+                  fontSize: '0.9rem'
                 }}
               />
               <input
@@ -830,30 +941,42 @@ export default function TripOverview() {
                 placeholder="Location (e.g., Lima, Peru)"
                 style={{
                   width: '100%',
-                  padding: '0.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  color: 'white'
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: 'white',
+                  fontSize: '0.9rem'
                 }}
               />
             </button>
 
             <button
               onClick={() => handleApplyMetadata('blank')}
+              className="glass-card"
               style={{
                 width: '100%',
-                padding: '1rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                background: 'rgba(255, 255, 255, 0.05)',
+                padding: '1.1rem',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(45, 27, 78, 0.6)',
                 color: 'white',
                 cursor: 'pointer',
-                textAlign: 'left'
+                textAlign: 'left',
+                transition: 'all 0.3s ease'
               }}
             >
-              <div style={{ fontWeight: 'bold' }}>⊘ Add as Blank</div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.7, marginTop: '0.25rem' }}>
+              <div style={{
+                fontWeight: 600,
+                color: '#D4AF37'
+              }}>
+                ⊘ Add as Blank
+              </div>
+              <div style={{
+                fontSize: '0.85rem',
+                color: 'rgba(255, 255, 255, 0.6)',
+                marginTop: '0.35rem'
+              }}>
                 No metadata, just upload the photos
               </div>
             </button>
