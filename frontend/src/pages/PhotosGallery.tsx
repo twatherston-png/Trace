@@ -320,147 +320,179 @@ export default function PhotosGallery() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#000000',
-      padding: '1rem',
-      paddingTop: '72px',
-      paddingBottom: '80px'
+      padding: '1.25rem',
+      paddingTop: '76px',
+      paddingBottom: '86px'
     }}>
-      <TopBar title="Photos" />
+      <TopBar title="Photos" subtitle={`${photos.length} memories captured`} />
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         {/* Notification */}
         {notification && (
-          <div style={{
+          <div className="fade-in" style={{
             position: 'fixed',
             top: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: notification.type === 'success' ? '#4CAF50' : '#f44336',
+            background: notification.type === 'success'
+              ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.95) 0%, rgba(56, 142, 60, 0.95) 100%)'
+              : 'linear-gradient(135deg, rgba(244, 67, 54, 0.95) 0%, rgba(211, 47, 47, 0.95) 100%)',
             color: 'white',
             padding: '1rem 2rem',
-            borderRadius: '8px',
+            borderRadius: '16px',
             zIndex: 1000,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            fontWeight: 500
           }}>
             {notification.message}
           </div>
         )}
 
         {/* Sort Controls */}
-        <div style={{
+        <div className="glass-card" style={{
           display: 'flex',
           gap: '0.5rem',
           marginBottom: '1.5rem',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          padding: '0.75rem'
         }}>
           {(['date', 'trip', 'location'] as const).map(sort => (
             <button
               key={sort}
               onClick={() => setSortBy(sort)}
               style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                border: 'none',
+                padding: '0.55rem 1rem',
+                borderRadius: '10px',
+                border: sortBy === sort ? '1px solid rgba(212, 175, 55, 0.3)' : '1px solid transparent',
                 background: sortBy === sort
-                  ? 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)'
-                  : 'rgba(255, 255, 255, 0.1)',
-                color: 'white',
+                  ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(229, 196, 88, 0.08) 100%)'
+                  : 'transparent',
+                color: sortBy === sort ? '#D4AF37' : 'rgba(255, 255, 255, 0.6)',
                 cursor: 'pointer',
-                textTransform: 'capitalize'
+                textTransform: 'capitalize',
+                fontSize: '0.85rem',
+                fontWeight: sortBy === sort ? 600 : 400,
+                transition: 'all 0.3s ease'
               }}
             >
               {sort}
             </button>
           ))}
+          <div style={{ flex: 1 }} />
           <button
             onClick={toggleSelectMode}
             style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              border: 'none',
+              padding: '0.55rem 1rem',
+              borderRadius: '10px',
+              border: selectMode ? '1px solid rgba(212, 175, 55, 0.4)' : '1px solid transparent',
               background: selectMode
-                ? 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
-                : 'rgba(255, 255, 255, 0.1)',
-              color: selectMode ? '#2D1B4E' : 'white',
+                ? 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(229, 196, 88, 0.1) 100%)'
+                : 'transparent',
+              color: selectMode ? '#D4AF37' : 'rgba(255, 255, 255, 0.6)',
               cursor: 'pointer',
-              fontWeight: selectMode ? 'bold' : 'normal'
+              fontWeight: selectMode ? 600 : 400,
+              fontSize: '0.85rem',
+              transition: 'all 0.3s ease'
             }}
           >
-            {selectMode ? '✓ Select Mode' : '☐ Select'}
+            {selectMode ? '✓ Selecting' : '☐ Select'}
           </button>
-          {selectMode && (
-            <>
+        </div>
+
+        {/* Select Mode Actions */}
+        {selectMode && (
+          <div className="fade-in" style={{
+            display: 'flex',
+            gap: '0.5rem',
+            marginBottom: '1rem',
+            flexWrap: 'wrap'
+          }}>
+            <button
+              onClick={selectAllPhotos}
+              style={{
+                padding: '0.55rem 1rem',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(45, 27, 78, 0.6)',
+                backdropFilter: 'blur(10px)',
+                color: 'rgba(255, 255, 255, 0.8)',
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+            >
+              {selectedPhotos.size === photos.length ? 'Deselect All' : 'Select All'}
+            </button>
+            {selectedPhotos.size > 0 && (
               <button
-                onClick={selectAllPhotos}
+                onClick={handleBulkEdit}
+                className="gold-glow"
                 style={{
-                  padding: '0.5rem 1rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
-                  cursor: 'pointer'
+                  padding: '0.55rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(212, 175, 55, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(229, 196, 88, 0.08) 100%)',
+                  color: '#D4AF37',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: '0.85rem'
                 }}
               >
-                {selectedPhotos.size === photos.length ? 'Deselect All' : 'Select All'}
+                ✏️ Edit {selectedPhotos.size}
               </button>
-              {selectedPhotos.size > 0 && (
-                <button
-                  onClick={handleBulkEdit}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                    color: '#2D1B4E',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Edit {selectedPhotos.size} Photo{selectedPhotos.size !== 1 ? 's' : ''}
-                </button>
-              )}
-            </>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Photos Grid */}
         {photos.length === 0 ? (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
+          <div className="fade-in glass-card" style={{
             padding: '3rem',
             textAlign: 'center'
           }}>
-            <p style={{ marginBottom: '1rem', opacity: 0.7 }}>No photos yet</p>
-            <p style={{ fontSize: '0.9rem', opacity: 0.5 }}>Upload photos from a trip page</p>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.6 }}>📸</div>
+            <p style={{ marginBottom: '0.5rem', opacity: 0.7 }}>No photos yet</p>
+            <p style={{ fontSize: '0.85rem', opacity: 0.4 }}>Upload photos from a trip page</p>
           </div>
         ) : (
           <div>
             {Object.entries(groupedPhotos).map(([group, groupPhotos]) => (
               <div key={group} style={{ marginBottom: '2rem' }}>
                 <h3 style={{
-                  fontSize: '1rem',
-                  marginBottom: '1rem',
-                  opacity: 0.8,
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                  paddingBottom: '0.5rem'
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  marginBottom: '0.75rem',
+                  color: 'rgba(212, 175, 55, 0.7)',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  paddingBottom: '0.5rem',
+                  borderBottom: '1px solid rgba(212, 175, 55, 0.1)'
                 }}>
                   {group}
                 </h3>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                   gap: '0.5rem'
                 }}>
-                  {groupPhotos.map(photo => (
+                  {groupPhotos.map((photo, idx) => (
                     <div
                       key={photo.id}
+                      className="fade-in"
                       style={{
                         position: 'relative',
                         aspectRatio: '1',
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         overflow: 'hidden',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: selectedPhotos.has(photo.id) ? '3px solid #D4AF37' : 'none'
+                        background: 'rgba(45, 27, 78, 0.3)',
+                        border: selectedPhotos.has(photo.id)
+                          ? '2px solid #D4AF37'
+                          : '1px solid rgba(255, 255, 255, 0.06)',
+                        boxShadow: selectedPhotos.has(photo.id)
+                          ? '0 0 16px rgba(212, 175, 55, 0.3)'
+                          : 'none',
+                        transition: 'all 0.3s ease',
+                        animationDelay: `${idx * 0.03}s`
                       }}
                       onMouseDown={() => handleLongPressStart(photo.id)}
                       onMouseUp={handleLongPressEnd}
@@ -476,8 +508,11 @@ export default function PhotosGallery() {
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          cursor: selectMode ? 'pointer' : 'pointer'
+                          cursor: 'pointer',
+                          transition: 'transform 0.3s ease'
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                       />
                       {selectMode && (
                         <div
@@ -486,18 +521,22 @@ export default function PhotosGallery() {
                             position: 'absolute',
                             top: '8px',
                             left: '8px',
-                            width: '28px',
-                            height: '28px',
+                            width: '26px',
+                            height: '26px',
                             borderRadius: '50%',
-                            background: selectedPhotos.has(photo.id) ? '#D4AF37' : 'rgba(0,0,0,0.5)',
-                            border: '2px solid white',
+                            background: selectedPhotos.has(photo.id)
+                              ? 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
+                              : 'rgba(0, 0, 0, 0.5)',
+                            backdropFilter: 'blur(4px)',
+                            border: '2px solid rgba(255, 255, 255, 0.8)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            fontSize: '14px',
+                            fontSize: '12px',
                             color: 'white',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            transition: 'all 0.2s ease'
                           }}
                         >
                           {selectedPhotos.has(photo.id) ? '✓' : ''}
@@ -521,17 +560,19 @@ export default function PhotosGallery() {
         )}
       </div>
 
-      {/* Photo Modal */}
+      {/* Photo Lightbox */}
       {selectedPhoto && (
         <div
           onClick={() => setSelectedPhoto(null)}
+          className="fade-in"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
+            background: 'rgba(0, 0, 0, 0.92)',
+            backdropFilter: 'blur(20px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -539,15 +580,31 @@ export default function PhotosGallery() {
             padding: '1rem'
           }}
         >
-          <img
-            src={selectedPhoto.url}
-            alt={selectedPhoto.caption || 'Photo'}
-            style={{
-              maxWidth: '100%',
-              maxHeight: '100%',
-              borderRadius: '8px'
-            }}
-          />
+          <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
+            <img
+              src={selectedPhoto.url}
+              alt={selectedPhoto.caption || 'Photo'}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '85vh',
+                borderRadius: '12px',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)'
+              }}
+            />
+            {selectedPhoto.caption && (
+              <div style={{
+                position: 'absolute',
+                bottom: '-40px',
+                left: 0,
+                right: 0,
+                textAlign: 'center',
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontSize: '0.9rem'
+              }}>
+                {selectedPhoto.caption}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -555,50 +612,69 @@ export default function PhotosGallery() {
       {editingPhoto && (
         <div
           onClick={() => setEditingPhoto(null)}
+          className="fade-in"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
             zIndex: 3000,
             padding: '1rem',
             overflowY: 'auto',
-            paddingTop: '80px'
+            paddingTop: '60px'
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#1a1a1a',
-              borderRadius: '16px',
-              padding: '1.5rem',
+              background: 'rgba(45, 27, 78, 0.9)',
+              backdropFilter: 'blur(30px)',
+              WebkitBackdropFilter: 'blur(30px)',
+              borderRadius: '24px',
+              padding: '1.75rem',
               maxWidth: '500px',
               width: '100%',
-              border: '1px solid rgba(255,255,255,0.1)'
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
             }}
           >
             {/* Preview */}
-            <img
-              src={editingPhoto.url}
-              alt=""
-              style={{
-                width: '100%',
-                maxHeight: '200px',
-                objectFit: 'cover',
-                borderRadius: '8px',
-                marginBottom: '1rem'
-              }}
-            />
+            <div style={{
+              borderRadius: '16px',
+              overflow: 'hidden',
+              marginBottom: '1.25rem',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
+            }}>
+              <img
+                src={editingPhoto.url}
+                alt=""
+                style={{
+                  width: '100%',
+                  maxHeight: '200px',
+                  objectFit: 'cover',
+                  display: 'block'
+                }}
+              />
+            </div>
 
-            <h3 style={{ color: 'white', marginBottom: '1rem', fontSize: '1.2rem' }}>Edit Photo Details</h3>
+            <h3 style={{
+              color: 'white',
+              marginBottom: '1.25rem',
+              fontSize: '1.2rem',
+              fontWeight: 600,
+              letterSpacing: '-0.01em'
+            }}>
+              Edit Photo Details
+            </h3>
 
             {/* Date */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Date Taken
             </label>
             <input
@@ -607,18 +683,19 @@ export default function PhotosGallery() {
               onChange={(e) => setEditDate(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1rem',
-                fontSize: '1rem'
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
               }}
             />
 
             {/* Location */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Location
             </label>
             <input
@@ -628,18 +705,19 @@ export default function PhotosGallery() {
               placeholder="e.g. Lima, Peru"
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1rem',
-                fontSize: '1rem'
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
               }}
             />
 
             {/* Trip */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Trip
             </label>
             <select
@@ -647,25 +725,26 @@ export default function PhotosGallery() {
               onChange={(e) => setEditTripId(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1rem',
-                fontSize: '1rem'
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
               }}
             >
-              <option value="" style={{ background: '#1a1a1a' }}>No trip</option>
+              <option value="" style={{ background: '#2D1B4E' }}>No trip</option>
               {trips.map(t => (
-                <option key={t.id} value={t.id} style={{ background: '#1a1a1a' }}>{t.name}</option>
+                <option key={t.id} value={t.id} style={{ background: '#2D1B4E' }}>{t.name}</option>
               ))}
             </select>
 
-            {/* Day (auto-assigned if date matches) */}
+            {/* Day */}
             {editTripId && (
               <>
-                <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+                <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
                   Day (auto-assigned by date)
                 </label>
                 <select
@@ -673,18 +752,19 @@ export default function PhotosGallery() {
                   onChange={(e) => setEditDayId(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    background: 'rgba(255,255,255,0.1)',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.06)',
                     color: 'white',
                     marginBottom: '1rem',
-                    fontSize: '1rem'
+                    fontSize: '0.95rem',
+                    transition: 'all 0.3s ease'
                   }}
                 >
-                  <option value="" style={{ background: '#1a1a1a' }}>Auto (match by date)</option>
+                  <option value="" style={{ background: '#2D1B4E' }}>Auto (match by date)</option>
                   {days.filter(d => d.trip_id === editTripId).map(d => (
-                    <option key={d.id} value={d.id} style={{ background: '#1a1a1a' }}>
+                    <option key={d.id} value={d.id} style={{ background: '#2D1B4E' }}>
                       {new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {d.location || 'No location'}
                     </option>
                   ))}
@@ -693,7 +773,7 @@ export default function PhotosGallery() {
             )}
 
             {/* Notes */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Notes
             </label>
             <textarea
@@ -703,19 +783,20 @@ export default function PhotosGallery() {
               rows={2}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1rem',
-                fontSize: '1rem',
-                resize: 'vertical'
+                fontSize: '0.95rem',
+                resize: 'vertical',
+                transition: 'all 0.3s ease'
               }}
             />
 
             {/* Journal Entry */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Journal Entry
             </label>
             <textarea
@@ -723,16 +804,17 @@ export default function PhotosGallery() {
               onChange={(e) => setEditJournal(e.target.value)}
               placeholder="Write about this moment..."
               rows={4}
+              className="journal-text"
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
-                color: 'white',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.9)',
                 marginBottom: '1.5rem',
-                fontSize: '1rem',
-                resize: 'vertical'
+                resize: 'vertical',
+                transition: 'all 0.3s ease'
               }}
             />
 
@@ -742,29 +824,33 @@ export default function PhotosGallery() {
                 onClick={() => setEditingPhoto(null)}
                 style={{
                   flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '0.9rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   background: 'transparent',
-                  color: 'white',
+                  color: 'rgba(255, 255, 255, 0.8)',
                   cursor: 'pointer',
-                  fontSize: '1rem'
+                  fontSize: '0.95rem',
+                  transition: 'all 0.3s ease'
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveEdit}
+                className="gold-glow"
                 style={{
                   flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '8px',
+                  padding: '0.9rem',
+                  borderRadius: '12px',
                   border: 'none',
                   background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                  color: '#2D1B4E',
-                  fontWeight: 'bold',
+                  color: '#1A0E2E',
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  fontSize: '1rem'
+                  fontSize: '0.95rem',
+                  transition: 'all 0.3s ease',
+                  letterSpacing: '0.02em'
                 }}
               >
                 Save
@@ -778,40 +864,56 @@ export default function PhotosGallery() {
       {bulkEditing && (
         <div
           onClick={() => setBulkEditing(false)}
+          className="fade-in"
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.95)',
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
             zIndex: 3000,
             padding: '1rem',
             overflowY: 'auto',
-            paddingTop: '80px'
+            paddingTop: '60px'
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: '#1a1a1a',
-              borderRadius: '16px',
-              padding: '1.5rem',
+              background: 'rgba(45, 27, 78, 0.9)',
+              backdropFilter: 'blur(30px)',
+              WebkitBackdropFilter: 'blur(30px)',
+              borderRadius: '24px',
+              padding: '1.75rem',
               maxWidth: '500px',
               width: '100%',
-              border: '1px solid rgba(255,255,255,0.1)'
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
             }}
           >
-            <h3 style={{ color: 'white', marginBottom: '0.5rem', fontSize: '1.2rem' }}>Edit {selectedPhotos.size} Photos</h3>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+            <h3 style={{
+              color: 'white',
+              marginBottom: '0.5rem',
+              fontSize: '1.2rem',
+              fontWeight: 600
+            }}>
+              Edit {selectedPhotos.size} Photos
+            </h3>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.5)',
+              fontSize: '0.85rem',
+              marginBottom: '1.5rem'
+            }}>
               Only filled fields will be updated. Leave blank to keep existing values.
             </p>
 
             {/* Date */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Date Taken
             </label>
             <input
@@ -820,18 +922,18 @@ export default function PhotosGallery() {
               onChange={(e) => setEditDate(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1rem',
-                fontSize: '1rem'
+                fontSize: '0.95rem'
               }}
             />
 
             {/* Location */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Location
             </label>
             <input
@@ -841,18 +943,18 @@ export default function PhotosGallery() {
               placeholder="e.g. Lima, Peru"
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1rem',
-                fontSize: '1rem'
+                fontSize: '0.95rem'
               }}
             />
 
             {/* Trip */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Trip
             </label>
             <select
@@ -860,23 +962,23 @@ export default function PhotosGallery() {
               onChange={(e) => setEditTripId(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
-                marginBottom: '1rem',
-                fontSize: '1rem'
+                marginBottom: '1.5rem',
+                fontSize: '0.95rem'
               }}
             >
-              <option value="" style={{ background: '#1a1a1a' }}>No change</option>
+              <option value="" style={{ background: '#2D1B4E' }}>No change</option>
               {trips.map(t => (
-                <option key={t.id} value={t.id} style={{ background: '#1a1a1a' }}>{t.name}</option>
+                <option key={t.id} value={t.id} style={{ background: '#2D1B4E' }}>{t.name}</option>
               ))}
             </select>
 
             {/* Notes */}
-            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', display: 'block', marginBottom: '0.25rem' }}>
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
               Notes
             </label>
             <textarea
@@ -886,13 +988,13 @@ export default function PhotosGallery() {
               rows={2}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
-                background: 'rgba(255,255,255,0.1)',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 marginBottom: '1.5rem',
-                fontSize: '1rem',
+                fontSize: '0.95rem',
                 resize: 'vertical'
               }}
             />
@@ -903,29 +1005,31 @@ export default function PhotosGallery() {
                 onClick={() => setBulkEditing(false)}
                 style={{
                   flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '0.9rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   background: 'transparent',
-                  color: 'white',
+                  color: 'rgba(255, 255, 255, 0.8)',
                   cursor: 'pointer',
-                  fontSize: '1rem'
+                  fontSize: '0.95rem'
                 }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleBulkSave}
+                className="gold-glow"
                 style={{
                   flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '8px',
+                  padding: '0.9rem',
+                  borderRadius: '12px',
                   border: 'none',
                   background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                  color: '#2D1B4E',
-                  fontWeight: 'bold',
+                  color: '#1A0E2E',
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  fontSize: '1rem'
+                  fontSize: '0.95rem',
+                  letterSpacing: '0.02em'
                 }}
               >
                 Update All
@@ -939,19 +1043,26 @@ export default function PhotosGallery() {
       {selectMode && selectedPhotos.size > 0 && (
         <div style={{
           position: 'fixed',
-          bottom: '70px',
-          left: 0,
-          right: 0,
-          background: 'linear-gradient(180deg, rgba(45,27,78,0.98) 0%, rgba(30,18,52,0.99) 100%)',
-          borderTop: '1px solid rgba(212,175,55,0.3)',
-          padding: '0.75rem 1rem',
+          bottom: '76px',
+          left: '0.75rem',
+          right: '0.75rem',
+          background: 'rgba(26, 14, 46, 0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(212, 175, 55, 0.2)',
+          borderRadius: '16px',
+          padding: '0.85rem 1.25rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           zIndex: 1500,
-          backdropFilter: 'blur(10px)'
+          boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.4)'
         }}>
-          <span style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '0.9rem' }}>
+          <span style={{
+            color: '#D4AF37',
+            fontWeight: 600,
+            fontSize: '0.9rem'
+          }}>
             {selectedPhotos.size} selected
           </span>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -959,12 +1070,12 @@ export default function PhotosGallery() {
               onClick={() => setSelectedPhotos(new Set())}
               style={{
                 padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 background: 'transparent',
-                color: 'white',
+                color: 'rgba(255, 255, 255, 0.7)',
                 cursor: 'pointer',
-                fontSize: '0.85rem'
+                fontSize: '0.8rem'
               }}
             >
               Clear
@@ -973,13 +1084,13 @@ export default function PhotosGallery() {
               onClick={handleBulkEdit}
               style={{
                 padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
-                color: 'white',
-                fontWeight: 'bold',
+                borderRadius: '10px',
+                border: '1px solid rgba(212, 175, 55, 0.3)',
+                background: 'rgba(212, 175, 55, 0.1)',
+                color: '#D4AF37',
+                fontWeight: 600,
                 cursor: 'pointer',
-                fontSize: '0.85rem'
+                fontSize: '0.8rem'
               }}
             >
               ✏️ Edit
@@ -988,13 +1099,13 @@ export default function PhotosGallery() {
               onClick={handleBulkDelete}
               style={{
                 padding: '0.5rem 1rem',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #c0392b 0%, #e74c3c 100%)',
+                background: 'linear-gradient(135deg, rgba(192, 57, 43, 0.8) 0%, rgba(231, 76, 60, 0.8) 100%)',
                 color: 'white',
-                fontWeight: 'bold',
+                fontWeight: 600,
                 cursor: 'pointer',
-                fontSize: '0.85rem'
+                fontSize: '0.8rem'
               }}
             >
               🗑️ Delete
