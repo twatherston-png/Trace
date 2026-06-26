@@ -31,16 +31,6 @@ export default function TripOverview() {
   const [bulkLocation, setBulkLocation] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Multi-select state
-  const [selectMode, setSelectMode] = useState(false)
-  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
-  const [bulkEditing, setBulkEditing] = useState(false)
-  const [editDate, setEditDate] = useState('')
-  const [editLocation, setEditLocation] = useState('')
-  const [editNotes, setEditNotes] = useState('')
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const longPressTriggered = useRef(false)
-
   useEffect(() => {
     if (tripId) loadTripData()
   }, [tripId])
