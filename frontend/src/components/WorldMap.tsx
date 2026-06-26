@@ -28,6 +28,7 @@ export default function WorldMap() {
   const markers = useRef<mapboxgl.Marker[]>([])
   const [cityClusters, setCityClusters] = useState<CityCluster[]>([])
   const [countryCount, setCountryCount] = useState(0)
+  const [status, setStatus] = useState<string>('Loading map...')
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -60,7 +61,7 @@ export default function WorldMap() {
   // Load photos with GPS coordinates
   useEffect(() => {
     const loadPhotos = async () => {
-      console.log('WorldMap: Loading photos with GPS coordinates...')
+      setStatus('Loading photos...')
       
       const { data: photos, error } = await supabase
         .from('photos')
@@ -70,15 +71,16 @@ export default function WorldMap() {
 
       if (error) {
         console.error('WorldMap: Error loading photos:', error)
+        setStatus('Error loading photos')
         return
       }
-
-      console.log(`WorldMap: Found ${photos?.length || 0} photos with GPS coordinates`)
 
       if (!photos || photos.length === 0) {
-        console.log('WorldMap: No photos with GPS coordinates found')
+        setStatus('No photos with GPS data found')
         return
       }
+
+      setStatus(`Found ${photos.length} photos with GPS`)
 
       // Check which photos already have city/country data cached
       const photoIds = photos.map(p => p.id)
@@ -182,6 +184,7 @@ export default function WorldMap() {
       // Count unique countries
       const countries = new Set(clusters.map(c => c.country))
       setCountryCount(countries.size)
+      setStatus(`${clusters.length} locations, ${countries.size} countries`)
     }
 
     loadPhotos()
@@ -291,6 +294,23 @@ export default function WorldMap() {
           overflow: 'hidden'
         }} 
       />
+      
+      {/* Status indicator */}
+      <div style={{
+        position: 'absolute',
+        bottom: '10px',
+        right: '10px',
+        zIndex: 10,
+        background: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(10px)',
+        padding: '0.5rem 0.75rem',
+        borderRadius: '8px',
+        fontSize: '0.75rem',
+        color: 'rgba(255, 255, 255, 0.8)',
+        border: '1px solid rgba(212, 175, 55, 0.2)'
+      }}>
+        {status}
+      </div>
     </div>
   )
 }
