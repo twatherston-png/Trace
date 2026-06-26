@@ -35,10 +35,10 @@ export default function TopBar({ title, subtitle, showBack, onBack, rightContent
         height: '100%'
       }}>
         <img
-          src="/wordmark.jpg"
+          src="/wordmark-transparent.png"
           alt="Trace"
           style={{
-            height: '45px',
+            height: '60px',
             width: 'auto',
             objectFit: 'contain'
           }}
