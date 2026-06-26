@@ -28,7 +28,29 @@ export default function TopBar({ title, subtitle, showBack, onBack, rightContent
       zIndex: 100,
       borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      {/* Wordmark - Left */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        height: '100%'
+      }}>
+        <img
+          src="/wordmark.jpg"
+          alt="Trace"
+          style={{
+            height: '45px',
+            width: 'auto',
+            objectFit: 'contain'
+          }}
+        />
+      </div>
+
+      {/* Headings - Right */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem'
+      }}>
         {showBack && (
           <button
             onClick={onBack || (() => navigate(-1))}
@@ -56,7 +78,7 @@ export default function TopBar({ title, subtitle, showBack, onBack, rightContent
             ←
           </button>
         )}
-        <div>
+        <div style={{ textAlign: 'right' }}>
           <h1 style={{
             fontSize: '1.15rem',
             fontWeight: 600,
