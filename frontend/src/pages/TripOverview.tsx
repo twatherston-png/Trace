@@ -67,6 +67,14 @@ export default function TripOverview() {
     }
   }, [notification])
 
+  const getThumbnailUrl = (url: string) => {
+    // Convert Supabase storage URL to use image transformation for thumbnails
+    // Original: https://xxx.supabase.co/storage/v1/object/public/photos/filename.jpg
+    // Thumbnail: https://xxx.supabase.co/storage/v1/render/image/public/photos/filename.jpg?width=300&height=300&quality=80
+    if (!url.includes('/storage/v1/object/public/photos/')) return url
+    return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=300&height=300&quality=80'
+  }
+
   const loadTripData = async () => {
     if (!tripId) return
 
@@ -833,8 +841,7 @@ export default function TripOverview() {
                             : '1px solid rgba(255, 255, 255, 0.06)',
                           boxShadow: selectedPhotos.has(photo.id)
                             ? '0 0 16px rgba(212, 175, 55, 0.3)'
-                            : 'none',
-                          transition: 'all 0.3s ease'
+                            : 'none'
                         }}
                         onMouseDown={() => handleLongPressStart(photo.id)}
                         onMouseUp={handleLongPressEnd}
@@ -852,18 +859,16 @@ export default function TripOverview() {
                           }}
                         >
                           <img
-                            src={photo.url}
+                            src={getThumbnailUrl(photo.url)}
                             alt={photo.caption || 'Photo'}
+                            loading="lazy"
                             onClick={() => !selectMode && setSelectedPhoto(photo)}
                             style={{
                               width: '100%',
                               height: '100%',
                               objectFit: 'cover',
-                              cursor: 'pointer',
-                              transition: 'transform 0.3s ease'
+                              cursor: 'pointer'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                             onError={(e) => {
                               console.error('Image failed to load:', photo.url)
                               e.currentTarget.style.display = 'none'
