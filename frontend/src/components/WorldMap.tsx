@@ -30,6 +30,12 @@ export default function WorldMap() {
   const [cityClusters, setCityClusters] = useState<CityCluster[]>([])
   const [countryCount, setCountryCount] = useState(0)
   const [status, setStatus] = useState<string>('Loading map...')
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const handleRefresh = () => {
+    setStatus('Refreshing...')
+    setRefreshKey(prev => prev + 1)
+  }
 
   useEffect(() => {
     if (!mapContainer.current) return
@@ -223,7 +229,7 @@ export default function WorldMap() {
     }
 
     loadPhotos()
-  }, [])
+  }, [refreshKey])
 
   // Render markers
   useEffect(() => {
@@ -330,21 +336,44 @@ export default function WorldMap() {
         }} 
       />
       
-      {/* Status indicator */}
+      {/* Status indicator + refresh */}
       <div style={{
         position: 'absolute',
         bottom: '10px',
         right: '10px',
         zIndex: 10,
-        background: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(10px)',
-        padding: '0.5rem 0.75rem',
-        borderRadius: '8px',
-        fontSize: '0.75rem',
-        color: 'rgba(255, 255, 255, 0.8)',
-        border: '1px solid rgba(212, 175, 55, 0.2)'
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem'
       }}>
-        {status}
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(10px)',
+          padding: '0.5rem 0.75rem',
+          borderRadius: '8px',
+          fontSize: '0.75rem',
+          color: 'rgba(255, 255, 255, 0.8)',
+          border: '1px solid rgba(212, 175, 55, 0.2)'
+        }}>
+          {status}
+        </div>
+        <button
+          onClick={handleRefresh}
+          style={{
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            padding: '0.5rem 0.6rem',
+            borderRadius: '8px',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            color: '#D4AF37',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            lineHeight: 1
+          }}
+          title="Refresh map"
+        >
+          ↻
+        </button>
       </div>
     </div>
   )
