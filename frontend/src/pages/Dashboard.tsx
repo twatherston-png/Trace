@@ -59,70 +59,115 @@ export default function Dashboard() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#000000',
-      padding: '1rem',
-      paddingTop: '72px',
-      paddingBottom: '80px'
+      padding: '1.25rem',
+      paddingTop: '76px',
+      paddingBottom: '86px'
     }}>
-      <TopBar title="Trace" />
+      <TopBar title="Trace" subtitle="Your journey, preserved" />
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
 
         {/* Stats */}
-        <div style={{
+        <div className="stagger" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1rem',
+          gap: '0.75rem',
           marginBottom: '2rem'
         }}>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1.5rem',
+          <div className="fade-in glass-card" style={{
+            padding: '1.5rem 1rem',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D4AF37' }}>
+            <div style={{
+              fontSize: '2.2rem',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '0.25rem'
+            }}>
               {stats.trips}
             </div>
-            <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>Trips</div>
+            <div style={{
+              fontSize: '0.75rem',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              Trips
+            </div>
           </div>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1.5rem',
+          <div className="fade-in glass-card" style={{
+            padding: '1.5rem 1rem',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D4AF37' }}>
+            <div style={{
+              fontSize: '2.2rem',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '0.25rem'
+            }}>
               {stats.photos}
             </div>
-            <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>Photos</div>
+            <div style={{
+              fontSize: '0.75rem',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              Photos
+            </div>
           </div>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1.5rem',
+          <div className="fade-in glass-card" style={{
+            padding: '1.5rem 1rem',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D4AF37' }}>
+            <div style={{
+              fontSize: '2.2rem',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '0.25rem'
+            }}>
               {stats.countries}
             </div>
-            <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>Countries</div>
+            <div style={{
+              fontSize: '0.75rem',
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              Countries
+            </div>
           </div>
         </div>
 
         {/* Create Trip Button */}
         <button
           onClick={() => setShowCreateTrip(!showCreateTrip)}
+          className="gold-glow"
           style={{
             width: '100%',
-            padding: '1rem',
+            padding: '1.1rem',
             marginBottom: '2rem',
-            borderRadius: '12px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
+            borderRadius: '16px',
+            border: '1px solid rgba(212, 175, 55, 0.2)',
+            background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.8) 0%, rgba(107, 77, 142, 0.8) 100%)',
+            backdropFilter: 'blur(10px)',
             color: 'white',
-            fontWeight: 'bold',
+            fontWeight: 600,
             cursor: 'pointer',
-            fontSize: '1rem'
+            fontSize: '0.95rem',
+            transition: 'all 0.3s ease',
+            letterSpacing: '0.02em'
           }}
         >
           {showCreateTrip ? 'Cancel' : '+ New Trip'}
@@ -130,11 +175,15 @@ export default function Dashboard() {
 
         {/* Create Trip Form */}
         {showCreateTrip && (
-          <form onSubmit={handleCreateTrip} style={{
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            marginBottom: '2rem'
+          <form onSubmit={handleCreateTrip} className="fade-in" style={{
+            background: 'rgba(45, 27, 78, 0.6)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            padding: '1.75rem',
+            marginBottom: '2rem',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
           }}>
             <input
               type="text"
@@ -144,16 +193,17 @@ export default function Dashboard() {
               required
               style={{
                 width: '100%',
-                padding: '0.75rem',
+                padding: '0.9rem 1rem',
                 marginBottom: '1rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                transition: 'all 0.3s ease'
               }}
             />
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
               <input
                 type="date"
                 value={newTrip.start_date}
@@ -161,12 +211,13 @@ export default function Dashboard() {
                 required
                 style={{
                   flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'rgba(255, 255, 255, 0.1)',
+                  padding: '0.9rem 1rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
                   color: 'white',
-                  fontSize: '1rem'
+                  fontSize: '0.9rem',
+                  transition: 'all 0.3s ease'
                 }}
               />
               <input
@@ -176,12 +227,13 @@ export default function Dashboard() {
                 required
                 style={{
                   flex: 1,
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: 'rgba(255, 255, 255, 0.1)',
+                  padding: '0.9rem 1rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
                   color: 'white',
-                  fontSize: '1rem'
+                  fontSize: '0.9rem',
+                  transition: 'all 0.3s ease'
                 }}
               />
             </div>
@@ -192,28 +244,32 @@ export default function Dashboard() {
               rows={2}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                marginBottom: '1rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: 'rgba(255, 255, 255, 0.1)',
+                padding: '0.9rem 1rem',
+                marginBottom: '1.25rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
                 color: 'white',
                 fontSize: '1rem',
-                resize: 'none'
+                resize: 'none',
+                transition: 'all 0.3s ease'
               }}
             />
             <button
               type="submit"
+              className="gold-glow"
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                borderRadius: '8px',
+                padding: '1rem',
+                borderRadius: '12px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
-                color: '#2D1B4E',
-                fontWeight: 'bold',
+                color: '#1A0E2E',
+                fontWeight: 700,
                 cursor: 'pointer',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                transition: 'all 0.3s ease',
+                letterSpacing: '0.02em'
               }}
             >
               Create Trip
@@ -223,70 +279,90 @@ export default function Dashboard() {
 
         {/* Recent Trips */}
         <div>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>Recent Trips</h2>
+          <h2 style={{
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            marginBottom: '1rem',
+            color: 'rgba(255, 255, 255, 0.9)',
+            letterSpacing: '-0.01em'
+          }}>
+            Recent Trips
+          </h2>
           {trips.length === 0 ? (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              padding: '2rem',
-              textAlign: 'center',
-              opacity: 0.7
+            <div className="fade-in glass-card" style={{
+              padding: '3rem 2rem',
+              textAlign: 'center'
             }}>
-              No trips yet. Create your first trip!
+              <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.6 }}>✈️</div>
+              <p style={{ opacity: 0.7, fontSize: '1rem' }}>No trips yet. Create your first trip!</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {trips.slice(0, 3).map(trip => (
                 <div
                   key={trip.id}
                   onClick={() => navigate(`/trips/${trip.id}`)}
+                  className="fade-in glass-card"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    padding: '1rem',
+                    padding: '1.25rem',
                     cursor: 'pointer',
-                    transition: 'transform 0.2s',
                     display: 'flex',
-                    gap: '1rem',
+                    gap: '1.25rem',
                     alignItems: 'center'
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
                   {trip.cover_photo_url ? (
-                    <img
-                      src={trip.cover_photo_url}
-                      alt={trip.name}
-                      style={{
-                        width: '80px',
-                        height: '80px',
-                        objectFit: 'cover',
-                        borderRadius: '8px',
-                        flexShrink: 0
-                      }}
-                    />
+                    <div className="photo-frame" style={{ flexShrink: 0 }}>
+                      <img
+                        src={trip.cover_photo_url}
+                        alt={trip.name}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                      />
+                    </div>
                   ) : (
                     <div style={{
                       width: '80px',
                       height: '80px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.6) 0%, rgba(107, 77, 142, 0.4) 100%)',
+                      borderRadius: '12px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '2rem',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      border: '1px solid rgba(255, 255, 255, 0.06)'
                     }}>
                       ✈️
                     </div>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                    <div style={{
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                      marginBottom: '0.4rem',
+                      letterSpacing: '-0.01em'
+                    }}>
                       {trip.name}
                     </div>
-                    <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                      {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
+                    <div style={{
+                      fontSize: '0.8rem',
+                      color: 'rgba(212, 175, 55, 0.7)',
+                      fontWeight: 500
+                    }}>
+                      {new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
+                  </div>
+                  <div style={{
+                    color: 'rgba(212, 175, 55, 0.5)',
+                    fontSize: '1.2rem',
+                    flexShrink: 0
+                  }}>
+                    →
                   </div>
                 </div>
               ))}

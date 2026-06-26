@@ -17,37 +17,63 @@ export default function TopBar({ title, subtitle, showBack, onBack, rightContent
       top: 0,
       left: 0,
       right: 0,
-      height: '56px',
-      background: '#2D1B4E',
+      height: '60px',
+      background: 'rgba(26, 14, 46, 0.85)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 1rem',
+      padding: '0 1.25rem',
       zIndex: 100,
-      borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+      borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         {showBack && (
           <button
             onClick={onBack || (() => navigate(-1))}
             style={{
-              background: 'transparent',
-              border: 'none',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               color: 'white',
               cursor: 'pointer',
-              fontSize: '1.2rem',
-              padding: '0.25rem'
+              fontSize: '1rem',
+              padding: '0.4rem 0.6rem',
+              borderRadius: '10px',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)'
+              e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.3)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)'
             }}
           >
             ←
           </button>
         )}
         <div>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white', margin: 0 }}>
+          <h1 style={{
+            fontSize: '1.15rem',
+            fontWeight: 600,
+            color: 'white',
+            margin: 0,
+            letterSpacing: '-0.01em'
+          }}>
             {title}
           </h1>
           {subtitle && (
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>
+            <div style={{
+              fontSize: '0.7rem',
+              color: 'rgba(212, 175, 55, 0.7)',
+              marginTop: '2px',
+              letterSpacing: '0.03em',
+              fontWeight: 500
+            }}>
               {subtitle}
             </div>
           )}

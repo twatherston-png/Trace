@@ -171,6 +171,49 @@ export default function PhotosGallery() {
     setEditDayId('')
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedPhotos.size === 0) return
+    if (!confirm(`Delete ${selectedPhotos.size} photo${selectedPhotos.size !== 1 ? 's' : ''}? This cannot be undone.`)) return
+
+    const photosToDelete = photos.filter(p => selectedPhotos.has(p.id))
+    let deletedCount = 0
+
+    for (const photo of photosToDelete) {
+      const urlParts = photo.url.split('/photos/')
+      if (urlParts.length < 2) continue
+      const filePath = urlParts[1]
+
+      const { error: storageError } = await supabase.storage
+        .from('photos')
+        .remove([filePath])
+
+      if (storageError) {
+        console.error('Storage delete error:', storageError)
+        continue
+      }
+
+      const { error: dbError } = await supabase
+        .from('photos')
+        .delete()
+        .eq('id', photo.id)
+
+      if (dbError) {
+        console.error('Database delete error:', dbError)
+      } else {
+        deletedCount++
+      }
+    }
+
+    if (deletedCount > 0) {
+      setNotification({ type: 'success', message: `${deletedCount} photo${deletedCount !== 1 ? 's' : ''} deleted!` })
+      setSelectedPhotos(new Set())
+      setSelectMode(false)
+      loadPhotos()
+    } else {
+      setNotification({ type: 'error', message: 'Failed to delete photos' })
+    }
+  }
+
   const handleBulkSave = async () => {
     if (selectedPhotos.size === 0) return
 
@@ -888,6 +931,74 @@ export default function PhotosGallery() {
                 Update All
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sticky Action Bar */}
+      {selectMode && selectedPhotos.size > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '70px',
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(180deg, rgba(45,27,78,0.98) 0%, rgba(30,18,52,0.99) 100%)',
+          borderTop: '1px solid rgba(212,175,55,0.3)',
+          padding: '0.75rem 1rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          zIndex: 1500,
+          backdropFilter: 'blur(10px)'
+        }}>
+          <span style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '0.9rem' }}>
+            {selectedPhotos.size} selected
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => setSelectedPhotos(new Set())}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'transparent',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+            >
+              Clear
+            </button>
+            <button
+              onClick={handleBulkEdit}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #6B4D8E 0%, #8B6DB0 100%)',
+                color: 'white',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+            >
+              ✏️ Edit
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #c0392b 0%, #e74c3c 100%)',
+                color: 'white',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '0.85rem'
+              }}
+            >
+              🗑️ Delete
+            </button>
           </div>
         </div>
       )}

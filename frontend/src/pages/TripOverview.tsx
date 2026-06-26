@@ -31,6 +31,16 @@ export default function TripOverview() {
   const [bulkLocation, setBulkLocation] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [bulkEditing, setBulkEditing] = useState(false)
+  const [editDate, setEditDate] = useState('')
+  const [editLocation, setEditLocation] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTriggered = useRef(false)
+
   useEffect(() => {
     if (tripId) loadTripData()
   }, [tripId])
@@ -114,7 +124,10 @@ export default function TripOverview() {
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('photos')
-          .upload(fileName, file)
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          })
 
         if (uploadError) {
           console.error('Upload error:', uploadError)
@@ -131,7 +144,7 @@ export default function TripOverview() {
             trip_id: tripId,
             url: publicUrl,
             caption: file.name
-          }).select()
+          }).select('id')
 
           if (insertError) {
             console.error('Insert error:', insertError)
@@ -150,14 +163,18 @@ export default function TripOverview() {
     }
 
     setUploading(false)
+    setUploadProgress(0)
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (successCount > 0) {
+      // Reload photos first to ensure they're in the database
+      await loadTripData()
+      
       // Show metadata modal
       setUploadedPhotoIds(uploadedPhotoIds)
       setExtractedExif(extractedExif)
       setShowMetadataModal(true)
-      loadTripData()
+      setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''}!` })
     }
     if (errorCount > 0) {
       setNotification({ type: 'error', message: `Failed to upload ${errorCount} photo${errorCount > 1 ? 's' : ''}` })
