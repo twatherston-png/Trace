@@ -550,7 +550,13 @@ export default function PhotosGallery() {
                         </div>
                       )}
                       {!selectMode && (
-                        <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}>
+                        <div 
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onTouchEnd={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onMouseUp={(e) => e.stopPropagation()}
+                          style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}
+                        >
                           <ActionMenu actions={[
                             { label: '✏️ Edit Details', onClick: () => handleOpenEdit(photo) },
                             { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }

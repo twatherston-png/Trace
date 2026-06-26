@@ -25,6 +25,9 @@ export default function TripOverview() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [showMetadataModal, setShowMetadataModal] = useState(false)
   const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([])
   const [extractedExif, setExtractedExif] = useState<{ date?: string; latitude?: number; longitude?: number }>({})
@@ -42,10 +45,20 @@ export default function TripOverview() {
     trip_id: '',
     day_id: ''
   })
+  const [trips, setTrips] = useState<any[]>([])
+  const [allDays, setAllDays] = useState<any[]>([])
 
   useEffect(() => {
     if (tripId) loadTripData()
+    loadTripsAndDays()
   }, [tripId])
+
+  const loadTripsAndDays = async () => {
+    const { data: tripsData } = await supabase.from('trips').select('*').order('start_date', { ascending: false })
+    if (tripsData) setTrips(tripsData)
+    const { data: allDaysData } = await supabase.from('days').select('*')
+    if (allDaysData) setAllDays(allDaysData)
+  }
 
   useEffect(() => {
     if (notification) {
@@ -362,6 +375,50 @@ export default function TripOverview() {
       setEditingPhoto(null)
       loadTripData()
     }
+  }
+
+  const handleLongPressStart = (photoId: string) => {
+    const timer = setTimeout(() => {
+      setSelectMode(true)
+      setSelectedPhotos(new Set([photoId]))
+    }, 500)
+    setLongPressTimer(timer)
+  }
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer)
+      setLongPressTimer(null)
+    }
+  }
+
+  const togglePhotoSelection = (photoId: string) => {
+    const newSelected = new Set(selectedPhotos)
+    if (newSelected.has(photoId)) {
+      newSelected.delete(photoId)
+      if (newSelected.size === 0) setSelectMode(false)
+    } else {
+      newSelected.add(photoId)
+    }
+    setSelectedPhotos(newSelected)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedPhotos.size === 0) return
+    if (!confirm(`Delete ${selectedPhotos.size} photo(s)?`)) return
+
+    for (const photoId of selectedPhotos) {
+      const photo = photos.find(p => p.id === photoId)
+      if (photo) await handleDeletePhoto(photoId, photo.url)
+    }
+    setSelectMode(false)
+    setSelectedPhotos(new Set())
+  }
+
+  const handleBulkEdit = () => {
+    if (selectedPhotos.size === 0) return
+    setUploadedPhotoIds(Array.from(selectedPhotos))
+    setShowMetadataModal(true)
   }
 
   const handleDeleteJournal = async (journalId: string) => {
@@ -681,6 +738,69 @@ export default function TripOverview() {
               {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : '+ Add Photos'}
             </button>
           </div>
+          {selectMode && (
+            <div className="fade-in" style={{
+              display: 'flex',
+              gap: '0.5rem',
+              marginBottom: '0.75rem',
+              padding: '0.75rem',
+              background: 'rgba(212, 175, 55, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(212, 175, 55, 0.3)'
+            }}>
+              <button
+                onClick={handleBulkEdit}
+                disabled={selectedPhotos.size === 0}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(212, 175, 55, 0.4)',
+                  background: selectedPhotos.size === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(212, 175, 55, 0.2)',
+                  color: selectedPhotos.size === 0 ? 'rgba(255, 255, 255, 0.3)' : '#D4AF37',
+                  fontWeight: 600,
+                  cursor: selectedPhotos.size === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8rem'
+                }}
+              >
+                📝 Apply Metadata ({selectedPhotos.size})
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedPhotos.size === 0}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(244, 67, 54, 0.4)',
+                  background: selectedPhotos.size === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(244, 67, 54, 0.2)',
+                  color: selectedPhotos.size === 0 ? 'rgba(255, 255, 255, 0.3)' : '#f44336',
+                  fontWeight: 600,
+                  cursor: selectedPhotos.size === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8rem'
+                }}
+              >
+                🗑️ Delete ({selectedPhotos.size})
+              </button>
+              <button
+                onClick={() => {
+                  setSelectMode(false)
+                  setSelectedPhotos(new Set())
+                }}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {photos.length === 0 ? (
             <div className="fade-in glass-card" style={{
               padding: '2.5rem',
@@ -707,8 +827,20 @@ export default function TripOverview() {
                           position: 'relative',
                           width: '120px',
                           height: '120px',
-                          borderRadius: '12px'
+                          borderRadius: '12px',
+                          border: selectedPhotos.has(photo.id)
+                            ? '2px solid #D4AF37'
+                            : '1px solid rgba(255, 255, 255, 0.06)',
+                          boxShadow: selectedPhotos.has(photo.id)
+                            ? '0 0 16px rgba(212, 175, 55, 0.3)'
+                            : 'none',
+                          transition: 'all 0.3s ease'
                         }}
+                        onMouseDown={() => handleLongPressStart(photo.id)}
+                        onMouseUp={handleLongPressEnd}
+                        onMouseLeave={handleLongPressEnd}
+                        onTouchStart={() => handleLongPressStart(photo.id)}
+                        onTouchEnd={handleLongPressEnd}
                       >
                         <div
                           className="photo-frame"
@@ -722,7 +854,7 @@ export default function TripOverview() {
                           <img
                             src={photo.url}
                             alt={photo.caption || 'Photo'}
-                            onClick={() => setSelectedPhoto(photo)}
+                            onClick={() => !selectMode && setSelectedPhoto(photo)}
                             style={{
                               width: '100%',
                               height: '100%',
@@ -738,14 +870,51 @@ export default function TripOverview() {
                             }}
                           />
                         </div>
-                        <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}>
-                          <ActionMenu actions={[
-                            { label: '✏️ Edit', onClick: () => handleEditPhoto(photo) },
-                            { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
-                            { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
-                          ]}
-                        />
-                        </div>
+                        {selectMode && (
+                          <div
+                            onClick={() => togglePhotoSelection(photo.id)}
+                            style={{
+                              position: 'absolute',
+                              top: '8px',
+                              left: '8px',
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '50%',
+                              background: selectedPhotos.has(photo.id)
+                                ? 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
+                                : 'rgba(0, 0, 0, 0.5)',
+                              backdropFilter: 'blur(4px)',
+                              border: '2px solid rgba(255, 255, 255, 0.8)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              color: 'white',
+                              fontWeight: 'bold',
+                              transition: 'all 0.2s ease',
+                              zIndex: 11
+                            }}
+                          >
+                            {selectedPhotos.has(photo.id) ? '✓' : ''}
+                          </div>
+                        )}
+                        {!selectMode && (
+                          <div 
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchEnd={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onMouseUp={(e) => e.stopPropagation()}
+                            style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}
+                          >
+                            <ActionMenu actions={[
+                              { label: '✏️ Edit', onClick: () => handleEditPhoto(photo) },
+                              { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
+                              { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
+                            ]}
+                          />
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1127,6 +1296,62 @@ export default function TripOverview() {
                 transition: 'all 0.3s ease'
               }}
             />
+
+            {/* Trip */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Trip
+            </label>
+            <select
+              value={editPhotoData.trip_id}
+              onChange={(e) => setEditPhotoData({ ...editPhotoData, trip_id: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <option value="" style={{ background: '#2D1B4E' }}>No trip</option>
+              {trips.map(t => (
+                <option key={t.id} value={t.id} style={{ background: '#2D1B4E' }}>{t.name}</option>
+              ))}
+            </select>
+
+            {/* Day */}
+            {editPhotoData.trip_id && (
+              <>
+                <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                  Day (auto-assigned by date)
+                </label>
+                <select
+                  value={editPhotoData.day_id}
+                  onChange={(e) => setEditPhotoData({ ...editPhotoData, day_id: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    color: 'white',
+                    marginBottom: '1rem',
+                    fontSize: '0.95rem',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <option value="" style={{ background: '#2D1B4E' }}>Auto (match by date)</option>
+                  {allDays.filter(d => d.trip_id === editPhotoData.trip_id).map(d => (
+                    <option key={d.id} value={d.id} style={{ background: '#2D1B4E' }}>
+                      {new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {d.location || 'No location'}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
 
             {/* Notes */}
             <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
