@@ -62,8 +62,8 @@ export default function TopBar({ title, subtitle, showBack, onBack, rightContent
             fontWeight: 600,
             color: 'white',
             margin: 0,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase'
+            fontVariant: 'small-caps',
+            letterSpacing: '0.08em'
           }}>
             {title}
           </h1>

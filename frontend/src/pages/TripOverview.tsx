@@ -7,6 +7,7 @@ import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
 import Itinerary from '../components/Itinerary'
 import TripMap from '../components/TripMap'
+import PhotoLightbox from '../components/PhotoLightbox'
 import EXIF from 'exif-js'
 
 export default function TripOverview() {
@@ -656,34 +657,42 @@ export default function TripOverview() {
                     {columnPhotos.map(photo => (
                       <div
                         key={photo.id}
-                        className="photo-frame"
                         style={{
                           position: 'relative',
                           width: '120px',
                           height: '120px',
-                          borderRadius: '12px',
-                          overflow: 'hidden'
+                          borderRadius: '12px'
                         }}
                       >
-                        <img
-                          src={photo.url}
-                          alt={photo.caption || 'Photo'}
-                          onClick={() => setSelectedPhoto(photo)}
+                        <div
+                          className="photo-frame"
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: 'cover',
-                            cursor: 'pointer',
-                            transition: 'transform 0.3s ease'
+                            borderRadius: '12px',
+                            overflow: 'hidden'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                          onError={(e) => {
-                            console.error('Image failed to load:', photo.url)
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                        <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                        >
+                          <img
+                            src={photo.url}
+                            alt={photo.caption || 'Photo'}
+                            onClick={() => setSelectedPhoto(photo)}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              cursor: 'pointer',
+                              transition: 'transform 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            onError={(e) => {
+                              console.error('Image failed to load:', photo.url)
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        </div>
+                        <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}>
                           <ActionMenu actions={[
                             { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
                             { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
@@ -796,128 +805,32 @@ export default function TripOverview() {
 
       {/* Photo Lightbox with Swipe */}
       {selectedPhoto && (
-        <div
-          onClick={() => setSelectedPhoto(null)}
-          className="fade-in"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.92)',
-            backdropFilter: 'blur(20px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            padding: '1rem'
+        <PhotoLightbox
+          photo={selectedPhoto}
+          photos={photos}
+          onClose={() => setSelectedPhoto(null)}
+          onNavigate={setSelectedPhoto}
+          onEdit={() => {
+            // Open edit from lightbox
+            setSelectedPhoto(null)
+            // Scroll to photo section and open edit via a small delay
+            setTimeout(() => {
+              // We can't directly open the edit modal from here since it's in PhotosGallery
+              // But we can set a flag... for now just navigate
+            }, 100)
           }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}
-          >
-            <img
-              src={selectedPhoto.url}
-              alt={selectedPhoto.caption || 'Photo'}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '85vh',
-                borderRadius: '12px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)'
-              }}
-            />
-            {selectedPhoto.caption && (
-              <div style={{
-                position: 'absolute',
-                bottom: '-40px',
-                left: 0,
-                right: 0,
-                textAlign: 'center',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: '0.9rem'
-              }}>
-                {selectedPhoto.caption}
-              </div>
-            )}
-            {/* Navigation arrows */}
-            {photos.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
-                    const prevIndex = (currentIndex - 1 + photos.length) % photos.length
-                    setSelectedPhoto(photos[prevIndex])
-                  }}
-                  style={{
-                    position: 'fixed',
-                    left: '20px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    width: '44px',
-                    height: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: 'white',
-                    fontSize: '1.3rem',
-                    transition: 'all 0.2s ease',
-                    zIndex: 2001
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                  }}
-                >
-                  ←
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id)
-                    const nextIndex = (currentIndex + 1) % photos.length
-                    setSelectedPhoto(photos[nextIndex])
-                  }}
-                  style={{
-                    position: 'fixed',
-                    right: '20px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '50%',
-                    width: '44px',
-                    height: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: 'white',
-                    fontSize: '1.3rem',
-                    transition: 'all 0.2s ease',
-                    zIndex: 2001
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                  }}
-                >
-                  →
-                </button>
-              </>
-            )}
-          </div>
-        </div>
+          onDelete={async (photoId: string, photoUrl: string) => {
+            await handleDeletePhoto(photoId, photoUrl)
+            // After delete, navigate to next photo or close
+            const remaining = photos.filter(p => p.id !== photoId)
+            if (remaining.length > 0) {
+              setSelectedPhoto(remaining[0])
+            } else {
+              setSelectedPhoto(null)
+            }
+          }}
+          onSetCover={handleSetCoverPhoto}
+        />
       )}
 
       {/* Journal Edit Modal */}
