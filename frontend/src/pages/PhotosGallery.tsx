@@ -4,6 +4,7 @@ import type { Photo } from '../types'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
+import PhotoLightbox from '../components/PhotoLightbox'
 
 export default function PhotosGallery() {
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -483,7 +484,6 @@ export default function PhotosGallery() {
                         position: 'relative',
                         aspectRatio: '1',
                         borderRadius: '12px',
-                        overflow: 'hidden',
                         background: 'rgba(45, 27, 78, 0.3)',
                         border: selectedPhotos.has(photo.id)
                           ? '2px solid #D4AF37'
@@ -500,20 +500,27 @@ export default function PhotosGallery() {
                       onTouchStart={() => handleLongPressStart(photo.id)}
                       onTouchEnd={handleLongPressEnd}
                     >
-                      <img
-                        src={photo.url}
-                        alt={photo.caption || 'Photo'}
-                        onClick={() => handlePhotoClick(photo)}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          cursor: 'pointer',
-                          transition: 'transform 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      />
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '12px',
+                        overflow: 'hidden'
+                      }}>
+                        <img
+                          src={photo.url}
+                          alt={photo.caption || 'Photo'}
+                          onClick={() => handlePhotoClick(photo)}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            cursor: 'pointer',
+                            transition: 'transform 0.3s ease'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        />
+                      </div>
                       {selectMode && (
                         <div
                           onClick={() => togglePhotoSelection(photo.id)}
@@ -543,7 +550,7 @@ export default function PhotosGallery() {
                         </div>
                       )}
                       {!selectMode && (
-                        <div style={{ position: 'absolute', top: '4px', right: '4px' }}>
+                        <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}>
                           <ActionMenu actions={[
                             { label: '✏️ Edit Details', onClick: () => handleOpenEdit(photo) },
                             { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
@@ -562,50 +569,26 @@ export default function PhotosGallery() {
 
       {/* Photo Lightbox */}
       {selectedPhoto && (
-        <div
-          onClick={() => setSelectedPhoto(null)}
-          className="fade-in"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.92)',
-            backdropFilter: 'blur(20px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            padding: '1rem'
+        <PhotoLightbox
+          photo={selectedPhoto}
+          photos={photos}
+          onClose={() => setSelectedPhoto(null)}
+          onNavigate={setSelectedPhoto}
+          onEdit={() => {
+            setSelectedPhoto(null)
+            handleOpenEdit(selectedPhoto)
           }}
-        >
-          <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
-            <img
-              src={selectedPhoto.url}
-              alt={selectedPhoto.caption || 'Photo'}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '85vh',
-                borderRadius: '12px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.6)'
-              }}
-            />
-            {selectedPhoto.caption && (
-              <div style={{
-                position: 'absolute',
-                bottom: '-40px',
-                left: 0,
-                right: 0,
-                textAlign: 'center',
-                color: 'rgba(255, 255, 255, 0.7)',
-                fontSize: '0.9rem'
-              }}>
-                {selectedPhoto.caption}
-              </div>
-            )}
-          </div>
-        </div>
+          onDelete={async (photoId: string, photoUrl: string) => {
+            await handleDeletePhoto(photoId, photoUrl)
+            const remaining = photos.filter(p => p.id !== photoId)
+            if (remaining.length > 0) {
+              setSelectedPhoto(remaining[0])
+            } else {
+              setSelectedPhoto(null)
+            }
+          }}
+          onSetCover={() => {}}
+        />
       )}
 
       {/* Edit Photo Modal */}

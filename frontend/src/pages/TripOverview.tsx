@@ -33,6 +33,15 @@ export default function TripOverview() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [editingJournal, setEditingJournal] = useState<JournalEntry | null>(null)
   const [editJournalData, setEditJournalData] = useState({ date: '', location: '', content: '' })
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null)
+  const [editPhotoData, setEditPhotoData] = useState({
+    taken_at: '',
+    location: '',
+    notes: '',
+    journal_entry: '',
+    trip_id: '',
+    day_id: ''
+  })
 
   useEffect(() => {
     if (tripId) loadTripData()
@@ -314,6 +323,43 @@ export default function TripOverview() {
       setNotification({ type: 'error', message: `Failed to set cover photo: ${error.message}` })
     } else {
       setNotification({ type: 'success', message: 'Cover photo set!' })
+      loadTripData()
+    }
+  }
+
+  const handleEditPhoto = (photo: Photo) => {
+    setEditingPhoto(photo)
+    setEditPhotoData({
+      taken_at: photo.taken_at || '',
+      location: photo.location || '',
+      notes: photo.notes || '',
+      journal_entry: photo.journal_entry || '',
+      trip_id: photo.trip_id || '',
+      day_id: photo.day_id || ''
+    })
+  }
+
+  const handleSavePhotoEdit = async () => {
+    if (!editingPhoto) return
+
+    const { error } = await supabase
+      .from('photos')
+      .update({
+        taken_at: editPhotoData.taken_at || null,
+        location: editPhotoData.location || null,
+        notes: editPhotoData.notes || null,
+        journal_entry: editPhotoData.journal_entry || null,
+        trip_id: editPhotoData.trip_id || null,
+        day_id: editPhotoData.day_id || null
+      })
+      .eq('id', editingPhoto.id)
+
+    if (error) {
+      console.error('Error updating photo:', error)
+      setNotification({ type: 'error', message: `Failed to update photo: ${error.message}` })
+    } else {
+      setNotification({ type: 'success', message: 'Photo updated!' })
+      setEditingPhoto(null)
       loadTripData()
     }
   }
@@ -694,6 +740,7 @@ export default function TripOverview() {
                         </div>
                         <div style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}>
                           <ActionMenu actions={[
+                            { label: '✏️ Edit', onClick: () => handleEditPhoto(photo) },
                             { label: '🖼️ Set as Cover', onClick: () => handleSetCoverPhoto(photo.url) },
                             { label: '🗑️ Delete Photo', onClick: () => handleDeletePhoto(photo.id, photo.url), danger: true }
                           ]}
@@ -811,13 +858,8 @@ export default function TripOverview() {
           onClose={() => setSelectedPhoto(null)}
           onNavigate={setSelectedPhoto}
           onEdit={() => {
-            // Open edit from lightbox
             setSelectedPhoto(null)
-            // Scroll to photo section and open edit via a small delay
-            setTimeout(() => {
-              // We can't directly open the edit modal from here since it's in PhotosGallery
-              // But we can set a flag... for now just navigate
-            }, 100)
+            setTimeout(() => handleEditPhoto(selectedPhoto), 100)
           }}
           onDelete={async (photoId: string, photoUrl: string) => {
             await handleDeletePhoto(photoId, photoUrl)
@@ -971,6 +1013,189 @@ export default function TripOverview() {
               </button>
               <button
                 onClick={handleSaveJournalEdit}
+                className="gold-glow"
+                style={{
+                  flex: 1,
+                  padding: '0.9rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+                  color: '#1A0E2E',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  transition: 'all 0.3s ease',
+                  letterSpacing: '0.02em'
+                }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Edit Modal */}
+      {editingPhoto && (
+        <div
+          onClick={() => {
+            setEditingPhoto(null)
+            setEditPhotoData({ taken_at: '', location: '', notes: '', journal_entry: '', trip_id: '', day_id: '' })
+          }}
+          className="fade-in"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1rem',
+            overflowY: 'auto',
+            paddingTop: '60px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(45, 27, 78, 0.9)',
+              backdropFilter: 'blur(30px)',
+              WebkitBackdropFilter: 'blur(30px)',
+              borderRadius: '24px',
+              padding: '1.75rem',
+              maxWidth: '500px',
+              width: '100%',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <h3 style={{
+              color: 'white',
+              marginBottom: '1.25rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              Edit Photo
+            </h3>
+
+            {/* Date */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Date Taken
+            </label>
+            <input
+              type="date"
+              value={editPhotoData.taken_at}
+              onChange={(e) => setEditPhotoData({ ...editPhotoData, taken_at: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Location */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Location
+            </label>
+            <input
+              type="text"
+              value={editPhotoData.location}
+              onChange={(e) => setEditPhotoData({ ...editPhotoData, location: e.target.value })}
+              placeholder="e.g. Lima, Peru"
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'white',
+                marginBottom: '1rem',
+                fontSize: '0.95rem',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Notes */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Notes
+            </label>
+            <textarea
+              value={editPhotoData.notes}
+              onChange={(e) => setEditPhotoData({ ...editPhotoData, notes: e.target.value })}
+              rows={3}
+              placeholder="Add notes about this photo..."
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                marginBottom: '1rem',
+                resize: 'vertical',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Journal Entry */}
+            <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+              Journal Entry
+            </label>
+            <textarea
+              value={editPhotoData.journal_entry}
+              onChange={(e) => setEditPhotoData({ ...editPhotoData, journal_entry: e.target.value })}
+              rows={4}
+              placeholder="Write about this moment..."
+              className="journal-text"
+              style={{
+                width: '100%',
+                padding: '0.85rem 1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.9)',
+                marginBottom: '1.5rem',
+                resize: 'vertical',
+                transition: 'all 0.3s ease'
+              }}
+            />
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setEditingPhoto(null)
+                  setEditPhotoData({ taken_at: '', location: '', notes: '', journal_entry: '', trip_id: '', day_id: '' })
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.9rem',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePhotoEdit}
                 className="gold-glow"
                 style={{
                   flex: 1,

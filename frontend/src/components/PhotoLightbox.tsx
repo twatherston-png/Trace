@@ -17,6 +17,7 @@ export default function PhotoLightbox({
   photos,
   onClose,
   onNavigate,
+  onEdit,
   onDelete,
   onSetCover
 }: PhotoLightboxProps) {
@@ -122,6 +123,7 @@ export default function PhotoLightbox({
           zIndex: 2001
         }}>
           <ActionMenu actions={[
+            { label: '✏️ Edit', onClick: () => onEdit?.() },
             { label: '🖼️ Set as Cover', onClick: () => onSetCover(photo.url) },
             { label: '🗑️ Delete Photo', onClick: () => onDelete(photo.id, photo.url), danger: true }
           ]} />
