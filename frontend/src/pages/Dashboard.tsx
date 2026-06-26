@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import type { Trip } from '../types'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
+import WorldMap from '../components/WorldMap'
 
 export default function Dashboard() {
   const [trips, setTrips] = useState<Trip[]>([])
@@ -65,6 +66,11 @@ export default function Dashboard() {
     }}>
       <TopBar title="Trace" subtitle="Your journey, preserved" />
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+
+        {/* World Map */}
+        <div style={{ marginBottom: '2rem' }}>
+          <WorldMap />
+        </div>
 
         {/* Stats */}
         <div className="stagger" style={{
