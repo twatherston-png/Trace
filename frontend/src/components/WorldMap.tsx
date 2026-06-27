@@ -30,6 +30,30 @@ interface Props {
   onCountryCount?: (count: number) => void
 }
 
+// Normalize city names to handle variations from Mapbox
+const normalizeCityName = (city: string): string => {
+  const normalizations: Record<string, string> = {
+    'lisboa': 'Lisbon',
+    'lisboa, portugal': 'Lisbon',
+    'singapore city': 'Singapore',
+    'singapore, singapore': 'Singapore',
+    'kyōto': 'Kyoto',
+    'ōsaka': 'Osaka',
+    'tōkyō': 'Tokyo',
+    'münchen': 'Munich',
+    'köln': 'Cologne',
+    'münchen, germany': 'Munich',
+    'praia': 'Praia',
+    'buenos aires.': 'Buenos Aires',
+    'rio de janeiro.': 'Rio de Janeiro',
+    'são paulo': 'São Paulo',
+    'sao paulo': 'São Paulo',
+  }
+  
+  const lower = city.toLowerCase().trim()
+  return normalizations[lower] || city
+}
+
 export default function WorldMap({ onCountryCount }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
@@ -318,17 +342,19 @@ export default function WorldMap({ onCountryCount }: Props) {
         }
       }
 
-      // Cluster by city
+      // Cluster by city (with normalization)
       const clusterMap = new Map<string, CityCluster>()
 
       allLocations.forEach(item => {
         if (!item.city || !item.country) return
 
-        const key = `${item.city}-${item.country}`
+        // Normalize city name to handle variations
+        const normalizedCity = normalizeCityName(item.city)
+        const key = `${normalizedCity}-${item.country}`
         
         if (!clusterMap.has(key)) {
           clusterMap.set(key, {
-            city: item.city,
+            city: normalizedCity,
             country: item.country,
             latitude: item.latitude,
             longitude: item.longitude,
@@ -411,10 +437,7 @@ export default function WorldMap({ onCountryCount }: Props) {
           if (pin.notes) {
             pinDetails += `<div style="font-size: 0.85rem; color: #333; margin-bottom: 0.5rem;">${pin.notes}</div>`
           }
-          // Only show delete button for standalone pins without photos
-          if (!pin.url) {
-            pinDetails += `<button onclick="window.__deletePin?.('${pinId}')" style="margin-top: 0.25rem; padding: 0.35rem 0.75rem; border: 1px solid #e74c3c; background: transparent; color: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑 Delete Pin</button>`
-          }
+          pinDetails += `<button onclick="window.__deletePin?.('${pinId}')" style="margin-top: 0.25rem; padding: 0.35rem 0.75rem; border: 1px solid #e74c3c; background: transparent; color: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑 Delete Pin</button>`
         })
         pinDetails += `</div>`
       }
