@@ -68,7 +68,7 @@ export default function PhotosGallery() {
     if (sortBy === 'date') {
       // Extract unique months from photos
       photos.forEach(photo => {
-        const date = new Date(photo.uploaded_at)
+        const date = new Date(photo.taken_at || photo.uploaded_at)
         const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         options.add(monthYear)
       })
@@ -550,7 +550,7 @@ export default function PhotosGallery() {
 
   const sortedPhotos = [...displayPhotos].sort((a, b) => {
     if (sortBy === 'date') {
-      return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+      return new Date(b.taken_at || b.uploaded_at).getTime() - new Date(a.taken_at || a.uploaded_at).getTime()
     }
     if (sortBy === 'location') {
       return (a.location || 'No location').localeCompare(b.location || 'No location')
@@ -566,7 +566,7 @@ export default function PhotosGallery() {
   const groupedPhotos = sortedPhotos.reduce((acc, photo) => {
     let key = 'No trip'
     if (sortBy === 'date') {
-      key = new Date(photo.uploaded_at).toLocaleDateString()
+      key = new Date(photo.taken_at || photo.uploaded_at).toLocaleDateString()
     } else if (sortBy === 'trip') {
       key = (photo as any).trips?.name || 'No trip'
     } else if (sortBy === 'location') {
