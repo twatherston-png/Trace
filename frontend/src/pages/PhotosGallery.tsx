@@ -19,6 +19,14 @@ export default function PhotosGallery() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([])
+  const [showMetadataModal, setShowMetadataModal] = useState(false)
+  const [extractedExif, setExtractedExif] = useState<{ date?: string; latitude?: number; longitude?: number }>({})
+  const [bulkDate, setBulkDate] = useState('')
+  const [bulkLocation, setBulkLocation] = useState('')
   
   // Edit form state
   const [editDate, setEditDate] = useState('')
@@ -58,6 +66,132 @@ export default function PhotosGallery() {
       .order('uploaded_at', { ascending: false })
 
     if (data) setPhotos(data)
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    setUploadProgress(0)
+
+    let successCount = 0
+    let errorCount = 0
+    const uploadedPhotoIds: string[] = []
+    let extractedExif: { date?: string; latitude?: number; longitude?: number } = {}
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      const fileName = `${Date.now()}-${file.name}`
+      
+      try {
+        // Extract EXIF data from first photo
+        if (i === 0) {
+          const exifData = await extractExifData(file)
+          extractedExif = exifData
+        }
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('photos')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError)
+          errorCount++
+          continue
+        }
+
+        if (uploadData) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('photos')
+            .getPublicUrl(fileName)
+
+          const { data: insertedData, error: insertError } = await supabase.from('photos').insert({
+            url: publicUrl,
+            caption: file.name
+          }).select('id')
+
+          if (insertError) {
+            console.error('Insert error:', insertError)
+            errorCount++
+          } else if (insertedData && insertedData.length > 0) {
+            successCount++
+            uploadedPhotoIds.push(insertedData[0].id)
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err)
+        errorCount++
+      }
+
+      setUploadProgress(((i + 1) / files.length) * 100)
+    }
+
+    setUploading(false)
+    setUploadProgress(0)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    if (successCount > 0) {
+      await loadPhotos()
+      setUploadedPhotoIds(uploadedPhotoIds)
+      setExtractedExif(extractedExif)
+      setShowMetadataModal(true)
+      setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''}!` })
+    }
+    if (errorCount > 0) {
+      setNotification({ type: 'error', message: `Failed to upload ${errorCount} photo${errorCount > 1 ? 's' : ''}` })
+    }
+  }
+
+  const extractExifData = async (file: File): Promise<{ date?: string; latitude?: number; longitude?: number }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          resolve({})
+        }
+        img.onerror = () => resolve({})
+        img.src = e.target?.result as string
+      }
+      reader.onerror = () => resolve({})
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleApplyMetadata = async (option: 'exif' | 'bulk' | 'blank', bulkDate?: string, bulkLocation?: string) => {
+    if (!uploadedPhotoIds.length) return
+
+    if (option === 'exif' && extractedExif.date) {
+      await supabase
+        .from('photos')
+        .update({
+          taken_at: extractedExif.date,
+          latitude: extractedExif.latitude,
+          longitude: extractedExif.longitude
+        })
+        .in('id', uploadedPhotoIds)
+    } else if (option === 'bulk' && (bulkDate || bulkLocation)) {
+      const updates: any = {}
+      if (bulkDate) updates.taken_at = bulkDate
+      if (bulkLocation) updates.location = bulkLocation
+      
+      await supabase
+        .from('photos')
+        .update(updates)
+        .in('id', uploadedPhotoIds)
+    }
+
+    setShowMetadataModal(false)
+    setUploadedPhotoIds([])
+    setExtractedExif({})
+    setBulkDate('')
+    setBulkLocation('')
+    setNotification({ type: 'success', message: 'Metadata applied successfully!' })
+    loadPhotos()
   }
 
   const handleDeletePhoto = async (photoId: string, photoUrl: string) => {
@@ -381,6 +515,33 @@ export default function PhotosGallery() {
             </button>
           ))}
           <div style={{ flex: 1 }} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="gold-glow"
+            style={{
+              padding: '0.55rem 1rem',
+              borderRadius: '10px',
+              border: 'none',
+              background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
+              color: '#1A0E2E',
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              opacity: uploading ? 0.7 : 1,
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {uploading ? `Uploading ${Math.round(uploadProgress)}%` : '+ Add Photos'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handlePhotoUpload}
+            style={{ display: 'none' }}
+          />
           <button
             onClick={toggleSelectMode}
             style={{
@@ -1123,6 +1284,180 @@ export default function PhotosGallery() {
               }}
             >
               🗑️ Delete
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Metadata Modal */}
+      {showMetadataModal && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          className="fade-in"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1rem'
+          }}
+        >
+          <div className="glass-card" style={{
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2rem',
+            borderRadius: '20px',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            background: 'rgba(26, 14, 46, 0.95)'
+          }}>
+            <h2 style={{
+              color: '#D4AF37',
+              marginBottom: '1rem',
+              fontSize: '1.5rem',
+              fontWeight: 700
+            }}>
+              📷 Add Photo Details
+            </h2>
+            <p style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              marginBottom: '1.5rem',
+              fontSize: '0.95rem'
+            }}>
+              Uploaded {uploadedPhotoIds.length} photo{uploadedPhotoIds.length > 1 ? 's' : ''}. How would you like to add details?
+            </p>
+
+            <button
+              onClick={() => handleApplyMetadata('exif')}
+              disabled={!extractedExif.date}
+              className="glass-card"
+              style={{
+                width: '100%',
+                padding: '1.1rem',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(45, 27, 78, 0.6)',
+                color: 'white',
+                cursor: !extractedExif.date ? 'not-allowed' : 'pointer',
+                marginBottom: '1rem',
+                textAlign: 'left',
+                opacity: !extractedExif.date ? 0.5 : 1,
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <div style={{
+                fontWeight: 600,
+                marginBottom: '0.5rem',
+                color: '#D4AF37'
+              }}>
+                📷 Use EXIF Data
+              </div>
+              <div style={{
+                fontSize: '0.85rem',
+                color: 'rgba(255, 255, 255, 0.7)'
+              }}>
+                Date: {extractedExif.date || 'Not available'}
+                {extractedExif.latitude && extractedExif.longitude && ` • Location: ${extractedExif.latitude.toFixed(4)}, ${extractedExif.longitude.toFixed(4)}`}
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleApplyMetadata('bulk', bulkDate, bulkLocation)}
+              disabled={!bulkDate && !bulkLocation}
+              className="glass-card"
+              style={{
+                width: '100%',
+                padding: '1.1rem',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(45, 27, 78, 0.6)',
+                color: 'white',
+                cursor: (!bulkDate && !bulkLocation) ? 'not-allowed' : 'pointer',
+                marginBottom: '1rem',
+                textAlign: 'left',
+                opacity: (!bulkDate && !bulkLocation) ? 0.5 : 1,
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <div style={{
+                fontWeight: 600,
+                marginBottom: '0.5rem',
+                color: '#D4AF37'
+              }}>
+                📝 Add Bulk Information
+              </div>
+              <input
+                type="date"
+                value={bulkDate}
+                onChange={(e) => setBulkDate(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: 'white',
+                  marginBottom: '0.5rem',
+                  fontSize: '0.9rem'
+                }}
+              />
+              <input
+                type="text"
+                value={bulkLocation}
+                onChange={(e) => setBulkLocation(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                placeholder="Location (e.g., Lima, Peru)"
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: 'white',
+                  fontSize: '0.9rem'
+                }}
+              />
+            </button>
+
+            <button
+              onClick={() => handleApplyMetadata('blank')}
+              className="glass-card"
+              style={{
+                width: '100%',
+                padding: '1.1rem',
+                borderRadius: '14px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'rgba(45, 27, 78, 0.6)',
+                color: 'white',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <div style={{
+                fontWeight: 600,
+                color: '#D4AF37'
+              }}>
+                ⊘ Add as Blank
+              </div>
+              <div style={{
+                fontSize: '0.85rem',
+                color: 'rgba(255, 255, 255, 0.6)',
+                marginTop: '0.35rem'
+              }}>
+                No metadata, just upload the photos
+              </div>
             </button>
           </div>
         </div>
