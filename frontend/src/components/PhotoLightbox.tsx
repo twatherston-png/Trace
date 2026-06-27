@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import type { Photo } from '../types'
-import ActionMenu from './ActionMenu'
 
 interface PhotoLightboxProps {
   photo: Photo
@@ -115,18 +114,105 @@ export default function PhotoLightbox({
           </div>
         )}
 
-        {/* Menu button */}
+        {/* Menu button - more prominent for mobile */}
         <div style={{
           position: 'absolute',
           top: '10px',
           right: '10px',
           zIndex: 2001
         }}>
-          <ActionMenu actions={[
-            { label: '✏️ Edit', onClick: () => onEdit?.() },
-            { label: '🖼️ Set as Cover', onClick: () => onSetCover(photo.url) },
-            { label: '🗑️ Delete Photo', onClick: () => onDelete(photo.id, photo.url), danger: true }
-          ]} />
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              const rect = e.currentTarget.getBoundingClientRect()
+              const menu = e.currentTarget.nextElementSibling as HTMLElement
+              if (menu) {
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none'
+                menu.style.top = `${rect.bottom + 8}px`
+                menu.style.right = `${window.innerWidth - rect.right}px`
+              }
+            }}
+            style={{
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '50%',
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'white',
+              fontSize: '1.5rem',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            ⋮
+          </button>
+          <div style={{
+            display: 'none',
+            position: 'fixed',
+            background: 'rgba(26, 14, 46, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            minWidth: '180px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+            zIndex: 9999
+          }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit?.(); (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '1rem 1.25rem',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                color: 'white',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '1rem'
+              }}
+            >
+              ✏️ Edit Details
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onSetCover(photo.url); (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '1rem 1.25rem',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                color: 'white',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '1rem'
+              }}
+            >
+              🖼️ Set as Cover
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(photo.id, photo.url); (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '1rem 1.25rem',
+                background: 'transparent',
+                border: 'none',
+                color: '#f44336',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontSize: '1rem'
+              }}
+            >
+              🗑️ Delete Photo
+            </button>
+          </div>
         </div>
 
         {/* Navigation arrows */}
