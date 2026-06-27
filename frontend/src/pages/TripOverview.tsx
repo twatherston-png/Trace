@@ -191,6 +191,9 @@ export default function TripOverview() {
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (successCount > 0) {
+      console.log('[TripOverview] Upload success, showing metadata modal for', uploadedPhotoIds.length, 'photos')
+      console.log('[TripOverview] extractedExif:', extractedExif)
+      console.log('[TripOverview] Setting bulkTripId to:', tripId)
       // Reload photos first to ensure they're in the database
       await loadTripData()
       
@@ -199,6 +202,7 @@ export default function TripOverview() {
       setExtractedExif(extractedExif)
       setBulkTripId(tripId || '')
       setShowMetadataModal(true)
+      console.log('[TripOverview] showMetadataModal set to true')
       setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''}!` })
     }
     if (errorCount > 0) {

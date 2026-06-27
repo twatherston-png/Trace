@@ -137,9 +137,11 @@ export default function PhotosGallery() {
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (successCount > 0) {
+      console.log('Upload success, showing metadata modal for', uploadedPhotoIds.length, 'photos')
       await loadPhotos()
       setUploadedPhotoIds(uploadedPhotoIds)
       setExtractedExif(extractedExif)
+      console.log('Setting showMetadataModal to true, extractedExif:', extractedExif)
       setShowMetadataModal(true)
       setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''}!` })
     }
@@ -398,7 +400,7 @@ export default function PhotosGallery() {
 
     // Auto-assign day if date and trip are set
     let autoDayId = editDayId
-    if (editDate && editTripId && !autoDayId) {
+    if (editDate && editTripId && editTripId !== 'null' && !autoDayId) {
       const matchingDay = days.find(d => 
         d.trip_id === editTripId && 
         d.date === editDate
@@ -413,7 +415,10 @@ export default function PhotosGallery() {
     if (editLocation) updates.location = editLocation
     if (editNotes) updates.notes = editNotes
     if (editJournal) updates.journal_entry = editJournal
-    if (editTripId) updates.trip_id = editTripId
+    if (editTripId) {
+      // Handle "null" string as actual null
+      updates.trip_id = editTripId === 'null' ? null : editTripId
+    }
     if (autoDayId) updates.day_id = autoDayId
 
     if (Object.keys(updates).length === 0) {
@@ -1191,6 +1196,7 @@ export default function PhotosGallery() {
               }}
             >
               <option value="" style={{ background: '#2D1B4E' }}>No change</option>
+              <option value="null" style={{ background: '#2D1B4E' }}>No trip</option>
               {trips.map(t => (
                 <option key={t.id} value={t.id} style={{ background: '#2D1B4E' }}>{t.name}</option>
               ))}
