@@ -23,7 +23,11 @@ interface CityCluster {
   tripIds: string[]
 }
 
-export default function WorldMap() {
+interface Props {
+  onCountryCount?: (count: number) => void
+}
+
+export default function WorldMap({ onCountryCount }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markers = useRef<mapboxgl.Marker[]>([])
@@ -61,7 +65,7 @@ export default function WorldMap() {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v10', // Slightly lighter dark theme
       center: [0, 20],
-      zoom: 1.5,
+      zoom: 0.5,
       projection: 'mercator'
     })
 
@@ -238,6 +242,7 @@ export default function WorldMap() {
       // Count unique countries
       const countries = new Set(clusters.map(c => c.country))
       setCountryCount(countries.size)
+      onCountryCount?.(countries.size)
       setStatus(`${clusters.length} locations, ${countries.size} countries`)
     }
 

@@ -85,7 +85,7 @@ export default function Dashboard() {
 
         {/* World Map */}
         <div style={{ marginBottom: '2rem' }}>
-          <WorldMap />
+          <WorldMap onCountryCount={(count) => setStats(prev => ({ ...prev, countries: count }))} />
         </div>
 
         {/* Stats */}
