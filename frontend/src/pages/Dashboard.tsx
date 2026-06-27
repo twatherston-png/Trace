@@ -154,6 +154,7 @@ export default function Dashboard() {
           const { error: insertError } = await supabase.from('photos').insert({
             user_id: user.id,
             url: data.publicUrl,
+            caption: file.name,
             taken_at: newPin.date || null,
             location: newPin.location || null,
             latitude,
