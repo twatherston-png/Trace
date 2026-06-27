@@ -411,8 +411,10 @@ export default function WorldMap({ onCountryCount }: Props) {
           if (pin.notes) {
             pinDetails += `<div style="font-size: 0.85rem; color: #333; margin-bottom: 0.5rem;">${pin.notes}</div>`
           }
-          // Delete button for standalone pins
-          pinDetails += `<button onclick="window.__deletePin?.('${pinId}')" style="margin-top: 0.25rem; padding: 0.35rem 0.75rem; border: 1px solid #e74c3c; background: transparent; color: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑 Delete Pin</button>`
+          // Only show delete button for standalone pins without photos
+          if (!pin.url) {
+            pinDetails += `<button onclick="window.__deletePin?.('${pinId}')" style="margin-top: 0.25rem; padding: 0.35rem 0.75rem; border: 1px solid #e74c3c; background: transparent; color: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑 Delete Pin</button>`
+          }
         })
         pinDetails += `</div>`
       }

@@ -125,22 +125,8 @@ export default function Dashboard() {
 
     setGeocoding(false)
 
-    // Create the pin
-    const { error: pinError } = await supabase.from('pins').insert({
-      user_id: user.id,
-      date: newPin.date,
-      location: newPin.location || null,
-      latitude,
-      longitude,
-      notes: newPin.notes || null
-    })
-
-    if (pinError) {
-      alert('Failed to create pin: ' + pinError.message)
-      return
-    }
-
-    // Upload photos to photos table if any
+    // If photos are added, only create photos (no separate pin)
+    // The pin will appear automatically from photo location data
     if (pinPhotos.length > 0) {
       for (const file of pinPhotos) {
         const fileExt = file.name.split('.').pop()
@@ -161,7 +147,6 @@ export default function Dashboard() {
           .getPublicUrl(filePath)
 
         if (data?.publicUrl) {
-          // Insert into photos table with pin's date and location
           await supabase.from('photos').insert({
             user_id: user.id,
             url: data.publicUrl,
@@ -169,9 +154,24 @@ export default function Dashboard() {
             location: newPin.location || null,
             latitude,
             longitude,
-            trip_id: null // Can be assigned later
+            trip_id: null
           })
         }
+      }
+    } else {
+      // No photos - create standalone pin
+      const { error: pinError } = await supabase.from('pins').insert({
+        user_id: user.id,
+        date: newPin.date,
+        location: newPin.location || null,
+        latitude,
+        longitude,
+        notes: newPin.notes || null
+      })
+
+      if (pinError) {
+        alert('Failed to create pin: ' + pinError.message)
+        return
       }
     }
 
