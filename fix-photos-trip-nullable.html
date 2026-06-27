@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Photos Trip Nullable</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #D4AF37;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .instructions {
+            background: #2D1B4E;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        pre {
+            background: #0d0d0d;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: 1px solid #333;
+        }
+        button {
+            background: #6B4D8E;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 1rem;
+            width: 100%;
+        }
+        button:hover {
+            background: #8B6DB0;
+        }
+        .success {
+            background: #4CAF50;
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fix Photos Trip Nullable</h1>
+        <div class="instructions">
+            <strong>Instructions:</strong><br>
+            1. Copy the SQL below<br>
+            2. Go to Supabase SQL Editor<br>
+            3. Clear everything there<br>
+            4. Paste this SQL<br>
+            5. Click Run
+        </div>
+        <pre id="sql-code">-- Make trip_id nullable on photos table
+-- This allows photos to exist without being assigned to a trip
+
+ALTER TABLE public.photos ALTER COLUMN trip_id DROP NOT NULL;
+
+-- Update RLS policies to allow photos without trip_id
+-- Drop existing policies
+DROP POLICY IF EXISTS "Users can view photos from own trips" ON public.photos;
+DROP POLICY IF EXISTS "Users can create photos for own trips" ON public.photos;
+DROP POLICY IF EXISTS "Users can update photos for own trips" ON public.photos;
+DROP POLICY IF EXISTS "Users can delete photos for own trips" ON public.photos;
+
+-- Recreate policies that allow photos with or without trip_id
+CREATE POLICY "Users can view own photos" ON public.photos
+  FOR SELECT USING (
+    trip_id IS NULL 
+    OR EXISTS (
+      SELECT 1 FROM public.trips
+      WHERE trips.id = photos.trip_id
+      AND trips.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can create own photos" ON public.photos
+  FOR INSERT WITH CHECK (
+    trip_id IS NULL 
+    OR EXISTS (
+      SELECT 1 FROM public.trips
+      WHERE trips.id = photos.trip_id
+      AND trips.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update own photos" ON public.photos
+  FOR UPDATE USING (
+    trip_id IS NULL 
+    OR EXISTS (
+      SELECT 1 FROM public.trips
+      WHERE trips.id = photos.trip_id
+      AND trips.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete own photos" ON public.photos
+  FOR DELETE USING (
+    trip_id IS NULL 
+    OR EXISTS (
+      SELECT 1 FROM public.trips
+      WHERE trips.id = photos.trip_id
+      AND trips.user_id = auth.uid()
+    )
+  );</pre>
+        <button onclick="copySQL()">Copy SQL to Clipboard</button>
+        <div class="success" id="success-msg">✓ Copied! Now paste it into Supabase SQL Editor</div>
+    </div>
+
+    <script>
+        function copySQL() {
+            const sqlCode = document.getElementById('sql-code').innerText;
+            navigator.clipboard.writeText(sqlCode).then(() => {
+                const successMsg = document.getElementById('success-msg');
+                successMsg.style.display = 'block';
+                setTimeout(() => {
+                    successMsg.style.display = 'none';
+                }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>
