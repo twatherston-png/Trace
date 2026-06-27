@@ -191,9 +191,7 @@ export default function TripOverview() {
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (successCount > 0) {
-      console.log('[TripOverview] Upload success, showing metadata modal for', uploadedPhotoIds.length, 'photos')
-      console.log('[TripOverview] extractedExif:', extractedExif)
-      console.log('[TripOverview] Setting bulkTripId to:', tripId)
+      alert(`[TripOverview] Upload success! ${successCount} photo(s) uploaded. About to show metadata modal.`)
       // Reload photos first to ensure they're in the database
       await loadTripData()
       
@@ -201,8 +199,9 @@ export default function TripOverview() {
       setUploadedPhotoIds(uploadedPhotoIds)
       setExtractedExif(extractedExif)
       setBulkTripId(tripId || '')
+      alert(`[TripOverview] Setting modal state: uploadedPhotoIds=${uploadedPhotoIds.length}, hasExif=${!!extractedExif.date}, bulkTripId=${tripId}`)
       setShowMetadataModal(true)
-      console.log('[TripOverview] showMetadataModal set to true')
+      alert(`[TripOverview] Modal should now be visible`)
       setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''}!` })
     }
     if (errorCount > 0) {
