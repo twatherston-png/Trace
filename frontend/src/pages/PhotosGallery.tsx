@@ -5,6 +5,7 @@ import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import ActionMenu from '../components/ActionMenu'
 import PhotoLightbox from '../components/PhotoLightbox'
+import EXIF from 'exif-js'
 
 export default function PhotosGallery() {
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -148,18 +149,40 @@ export default function PhotosGallery() {
 
   const extractExifData = async (file: File): Promise<{ date?: string; latitude?: number; longitude?: number }> => {
     return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          resolve({})
+      EXIF.getData(file as any, function(this: any) {
+        const result: { date?: string; latitude?: number; longitude?: number } = {}
+        
+        // Extract date
+        const exifDate = EXIF.getTag(this, 'DateTimeOriginal')
+        if (exifDate) {
+          // Format: "2024:01:15 10:30:00"
+          const match = exifDate.match(/(\d{4}):(\d{2}):(\d{2})/)
+          if (match) {
+            result.date = `${match[1]}-${match[2]}-${match[3]}`
+          }
         }
-        img.onerror = () => resolve({})
-        img.src = e.target?.result as string
-      }
-      reader.onerror = () => resolve({})
-      reader.readAsDataURL(file)
+        
+        // Extract GPS coordinates
+        const latitude = EXIF.getTag(this, 'GPSLatitude')
+        const longitude = EXIF.getTag(this, 'GPSLongitude')
+        const latRef = EXIF.getTag(this, 'GPSLatitudeRef')
+        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef')
+        
+        if (latitude && longitude) {
+          result.latitude = convertDMSToDD(latitude, latRef)
+          result.longitude = convertDMSToDD(longitude, lonRef)
+        }
+        
+        resolve(result)
+      })
     })
+  }
+
+  const convertDMSToDD = (dms: number[], ref: string) => {
+    const [degrees, minutes, seconds] = dms
+    let dd = degrees + minutes / 60 + seconds / 3600
+    if (ref === 'S' || ref === 'W') dd = -dd
+    return dd
   }
 
   const handleApplyMetadata = async (option: 'exif' | 'bulk' | 'blank', bulkDate?: string, bulkLocation?: string) => {
