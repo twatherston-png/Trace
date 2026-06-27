@@ -247,9 +247,6 @@ export default function WorldMap({ onCountryCount }: Props) {
           }
 
           if (city && country && lat && lng) {
-            // If pin has a photo, treat it like a photo
-            const itemType = pin.photo_url ? 'photo' : 'pin'
-            
             allLocations.push({
               id: `pin-${pin.id}`,
               url: pin.photo_url || '',
@@ -258,7 +255,7 @@ export default function WorldMap({ onCountryCount }: Props) {
               location: pin.location || undefined,
               city,
               country,
-              type: itemType,
+              type: 'pin',
               date: pin.date,
               notes: pin.notes
             })
