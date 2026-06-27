@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [newPin, setNewPin] = useState({ date: '', location: '', notes: '' })
   const [pinPhotos, setPinPhotos] = useState<File[]>([])
   const [geocoding, setGeocoding] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, percent: 0 })
   const fileInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
 
@@ -128,13 +130,23 @@ export default function Dashboard() {
     // If photos are added, only create photos (no separate pin)
     // The pin will appear automatically from photo location data
     if (pinPhotos.length > 0) {
+      setUploading(true)
+      setUploadProgress({ current: 0, total: pinPhotos.length, percent: 0 })
       let successCount = 0
       let errorCount = 0
 
-      for (const file of pinPhotos) {
+      for (let i = 0; i < pinPhotos.length; i++) {
+        const file = pinPhotos[i]
         const fileExt = file.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
         const filePath = `${fileName}`
+
+        // Update progress before upload
+        setUploadProgress({ 
+          current: i + 1, 
+          total: pinPhotos.length, 
+          percent: Math.round(((i) / pinPhotos.length) * 100) 
+        })
 
         const { error: uploadError } = await supabase.storage
           .from('photos')
@@ -168,7 +180,16 @@ export default function Dashboard() {
             successCount++
           }
         }
+
+        // Update progress after this file
+        setUploadProgress({ 
+          current: i + 1, 
+          total: pinPhotos.length, 
+          percent: Math.round(((i + 1) / pinPhotos.length) * 100) 
+        })
       }
+
+      setUploading(false)
 
       if (errorCount > 0) {
         alert(`Failed to add ${errorCount} photo(s): check console for details`)
@@ -510,7 +531,7 @@ export default function Dashboard() {
             </div>
             <button
               type="submit"
-              disabled={geocoding}
+              disabled={geocoding || uploading}
               className="gold-glow"
               style={{
                 width: '100%',
@@ -520,15 +541,42 @@ export default function Dashboard() {
                 background: 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)',
                 color: '#1A0E2E',
                 fontWeight: 700,
-                cursor: geocoding ? 'not-allowed' : 'pointer',
+                cursor: geocoding || uploading ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 transition: 'all 0.3s ease',
                 letterSpacing: '0.02em',
-                opacity: geocoding ? 0.7 : 1
+                opacity: geocoding || uploading ? 0.7 : 1
               }}
             >
-              {geocoding ? 'Locating...' : 'Drop Pin 📍'}
+              {uploading ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...` : geocoding ? 'Locating...' : 'Drop Pin 📍'}
             </button>
+            {uploading && (
+              <div style={{ marginTop: '1rem' }}>
+                <div style={{
+                  width: '100%',
+                  height: '8px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '4px',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{
+                    width: `${uploadProgress.percent}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 100%)',
+                    borderRadius: '4px',
+                    transition: 'width 0.3s ease'
+                  }} />
+                </div>
+                <div style={{
+                  marginTop: '0.5rem',
+                  fontSize: '0.85rem',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  textAlign: 'center'
+                }}>
+                  {uploadProgress.percent}% complete
+                </div>
+              </div>
+            )}
           </form>
         )}
 
