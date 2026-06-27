@@ -550,11 +550,27 @@ export default function PhotosGallery() {
                         </div>
                       )}
                       {!selectMode && (
-                        <div 
-                          onTouchStart={(e) => e.stopPropagation()}
-                          onTouchEnd={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onMouseUp={(e) => e.stopPropagation()}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                          }}
+                          onTouchStart={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                          }}
+                          onTouchEnd={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                          }}
+                          onMouseDown={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                          }}
+                          onMouseUp={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                          }}
                           style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}
                         >
                           <ActionMenu actions={[
