@@ -855,7 +855,7 @@ export default function PhotosGallery() {
       {selectedPhoto && (
         <PhotoLightbox
           photo={selectedPhoto}
-          photos={photos}
+          photos={displayPhotos}
           onClose={() => setSelectedPhoto(null)}
           onNavigate={setSelectedPhoto}
           onEdit={() => {
@@ -864,7 +864,7 @@ export default function PhotosGallery() {
           }}
           onDelete={async (photoId: string, photoUrl: string) => {
             await handleDeletePhoto(photoId, photoUrl)
-            const remaining = photos.filter(p => p.id !== photoId)
+            const remaining = displayPhotos.filter(p => p.id !== photoId)
             if (remaining.length > 0) {
               setSelectedPhoto(remaining[0])
             } else {
