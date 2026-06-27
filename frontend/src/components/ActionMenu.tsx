@@ -42,7 +42,32 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
     <div ref={menuRef} style={{ position: 'relative' }}>
       <button
         ref={buttonRef}
-        onClick={handleToggle}
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          e.nativeEvent.stopImmediatePropagation()
+          handleToggle()
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          e.nativeEvent.stopImmediatePropagation()
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          e.nativeEvent.stopImmediatePropagation()
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          e.nativeEvent.stopImmediatePropagation()
+        }}
+        onMouseUp={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          e.nativeEvent.stopImmediatePropagation()
+        }}
         style={{
           background: 'transparent',
           border: 'none',
@@ -50,7 +75,8 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
           fontSize: '1.4rem',
           cursor: 'pointer',
           padding: '0.25rem 0.5rem',
-          lineHeight: 1
+          lineHeight: 1,
+          pointerEvents: 'auto'
         }}
       >
         ⋮

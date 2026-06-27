@@ -554,24 +554,35 @@ export default function PhotosGallery() {
                           onClick={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
+                            e.nativeEvent.stopImmediatePropagation()
                           }}
                           onTouchStart={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
+                            e.nativeEvent.stopImmediatePropagation()
                           }}
                           onTouchEnd={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
+                            e.nativeEvent.stopImmediatePropagation()
                           }}
                           onMouseDown={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
+                            e.nativeEvent.stopImmediatePropagation()
                           }}
                           onMouseUp={(e) => {
                             e.stopPropagation()
                             e.preventDefault()
+                            e.nativeEvent.stopImmediatePropagation()
                           }}
-                          style={{ position: 'absolute', top: '4px', right: '4px', zIndex: 10 }}
+                          style={{ 
+                            position: 'absolute', 
+                            top: '4px', 
+                            right: '4px', 
+                            zIndex: 10,
+                            pointerEvents: 'auto'
+                          }}
                         >
                           <ActionMenu actions={[
                             { label: '✏️ Edit Details', onClick: () => handleOpenEdit(photo) },
