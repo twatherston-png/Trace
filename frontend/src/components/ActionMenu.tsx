@@ -12,14 +12,11 @@ interface ActionMenuProps {
 
 export default function ActionMenu({ actions }: ActionMenuProps) {
   const [open, setOpen] = useState(false)
-  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
-          buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
     }
@@ -27,71 +24,60 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
-  const handleToggle = () => {
-    if (!open && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      setMenuPos({
-        top: rect.bottom,
-        right: window.innerWidth - rect.right
-      })
-    }
-    setOpen(!open)
-  }
-
   return (
     <div ref={menuRef} style={{ position: 'relative' }}>
       <button
-        ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation()
-          e.nativeEvent.stopImmediatePropagation()
-          handleToggle()
-        }}
-        onTouchEnd={(e) => {
-          e.stopPropagation()
-          e.nativeEvent.stopImmediatePropagation()
+          setOpen(!open)
         }}
         style={{
-          background: 'transparent',
+          background: 'rgba(0, 0, 0, 0.5)',
           border: 'none',
           color: 'white',
-          fontSize: '1.4rem',
+          fontSize: '1.2rem',
           cursor: 'pointer',
           padding: '0.25rem 0.5rem',
           lineHeight: 1,
-          pointerEvents: 'auto'
+          borderRadius: '4px'
         }}
       >
         ⋮
       </button>
-      {open && menuPos && (
+      {open && (
         <div style={{
-          position: 'fixed',
-          top: menuPos.top,
-          right: menuPos.right,
-          background: '#1a1a1a',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '8px',
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: '4px',
+          background: 'rgba(26, 14, 46, 0.95)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(212, 175, 55, 0.3)',
+          borderRadius: '12px',
           overflow: 'hidden',
-          minWidth: '160px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+          minWidth: '180px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
           zIndex: 9999
         }}>
           {actions.map((action, i) => (
             <button
               key={i}
-              onClick={() => { action.onClick(); setOpen(false) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                action.onClick()
+                setOpen(false)
+              }}
               style={{
                 display: 'block',
                 width: '100%',
-                padding: '0.75rem 1rem',
+                padding: '1rem 1.25rem',
                 background: 'transparent',
                 border: 'none',
                 borderBottom: i < actions.length - 1 ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
                 color: action.danger ? '#f44336' : 'white',
                 cursor: 'pointer',
                 textAlign: 'left',
-                fontSize: '0.9rem'
+                fontSize: '1rem'
               }}
             >
               {action.label}
