@@ -553,27 +553,22 @@ export default function PhotosGallery() {
                         <div
                           onClick={(e) => {
                             e.stopPropagation()
-                            e.preventDefault()
                             e.nativeEvent.stopImmediatePropagation()
                           }}
                           onTouchStart={(e) => {
                             e.stopPropagation()
-                            e.preventDefault()
                             e.nativeEvent.stopImmediatePropagation()
                           }}
                           onTouchEnd={(e) => {
                             e.stopPropagation()
-                            e.preventDefault()
                             e.nativeEvent.stopImmediatePropagation()
                           }}
                           onMouseDown={(e) => {
                             e.stopPropagation()
-                            e.preventDefault()
                             e.nativeEvent.stopImmediatePropagation()
                           }}
                           onMouseUp={(e) => {
                             e.stopPropagation()
-                            e.preventDefault()
                             e.nativeEvent.stopImmediatePropagation()
                           }}
                           style={{ 

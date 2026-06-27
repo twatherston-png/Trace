@@ -44,28 +44,11 @@ export default function ActionMenu({ actions }: ActionMenuProps) {
         ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation()
-          e.preventDefault()
           e.nativeEvent.stopImmediatePropagation()
           handleToggle()
         }}
-        onTouchStart={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
-          e.nativeEvent.stopImmediatePropagation()
-        }}
         onTouchEnd={(e) => {
           e.stopPropagation()
-          e.preventDefault()
-          e.nativeEvent.stopImmediatePropagation()
-        }}
-        onMouseDown={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
-          e.nativeEvent.stopImmediatePropagation()
-        }}
-        onMouseUp={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
           e.nativeEvent.stopImmediatePropagation()
         }}
         style={{
