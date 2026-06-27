@@ -12,7 +12,8 @@ export default function Dashboard() {
   const [showCreateTrip, setShowCreateTrip] = useState(false)
   const [newTrip, setNewTrip] = useState({ name: '', start_date: '', end_date: '', notes: '' })
   const [showAddPin, setShowAddPin] = useState(false)
-  const [newPin, setNewPin] = useState({ date: '', location: '', notes: '', photo_url: '' })
+  const [newPin, setNewPin] = useState({ date: '', location: '', notes: '' })
+  const [pinPhotos, setPinPhotos] = useState<File[]>([])
   const [geocoding, setGeocoding] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
@@ -124,56 +125,69 @@ export default function Dashboard() {
 
     setGeocoding(false)
 
-    const { error } = await supabase.from('pins').insert({
+    // Create the pin
+    const { error: pinError } = await supabase.from('pins').insert({
       user_id: user.id,
       date: newPin.date,
       location: newPin.location || null,
       latitude,
       longitude,
-      notes: newPin.notes || null,
-      photo_url: newPin.photo_url || null
+      notes: newPin.notes || null
     })
 
-    if (!error) {
-      setShowAddPin(false)
-      setNewPin({ date: '', location: '', notes: '', photo_url: '' })
-      // Refresh map to show new pin
-      window.location.reload()
+    if (pinError) {
+      alert('Failed to create pin: ' + pinError.message)
+      return
     }
+
+    // Upload photos to photos table if any
+    if (pinPhotos.length > 0) {
+      for (const file of pinPhotos) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+        const filePath = `${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('photos')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          console.error('Error uploading photo:', uploadError)
+          continue
+        }
+
+        const { data } = supabase.storage
+          .from('photos')
+          .getPublicUrl(filePath)
+
+        if (data?.publicUrl) {
+          // Insert into photos table with pin's date and location
+          await supabase.from('photos').insert({
+            user_id: user.id,
+            url: data.publicUrl,
+            taken_at: newPin.date || null,
+            location: newPin.location || null,
+            latitude,
+            longitude,
+            trip_id: null // Can be assigned later
+          })
+        }
+      }
+    }
+
+    setShowAddPin(false)
+    setNewPin({ date: '', location: '', notes: '' })
+    setPinPhotos([])
+    window.location.reload()
   }
 
-  const handlePinPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handlePinPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    setPinPhotos([...pinPhotos, ...files])
+  }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${user.id}/${Date.now()}.${fileExt}`
-    const filePath = `${fileName}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('photos')
-      .upload(filePath, file)
-
-    if (uploadError) {
-      console.error('Error uploading photo:', uploadError)
-      alert('Failed to upload photo: ' + uploadError.message)
-      return
-    }
-
-    const { data } = supabase.storage
-      .from('photos')
-      .getPublicUrl(filePath)
-
-    if (!data?.publicUrl) {
-      alert('Failed to get photo URL')
-      return
-    }
-
-    setNewPin({ ...newPin, photo_url: data.publicUrl })
-    alert('Photo uploaded successfully!')
+  const removePinPhoto = (index: number) => {
+    setPinPhotos(pinPhotos.filter((_, i) => i !== index))
   }
 
   return (
@@ -397,73 +411,77 @@ export default function Dashboard() {
                 transition: 'all 0.3s ease'
               }}
             />
-            {/* Photo upload or placeholder */}
+            {/* Photo upload */}
             <div style={{ marginBottom: '1.25rem' }}>
-              {newPin.photo_url ? (
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <img
-                    src={newPin.photo_url}
-                    alt="Pin"
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      objectFit: 'cover',
-                      borderRadius: '12px',
-                      border: '1px solid rgba(255, 255, 255, 0.1)'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setNewPin({ ...newPin, photo_url: '' })}
-                    style={{
-                      position: 'absolute',
-                      top: '-8px',
-                      right: '-8px',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: 'rgba(231, 76, 60, 0.9)',
-                      border: 'none',
-                      color: 'white',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      padding: '0.6rem 1rem',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem'
-                    }}
-                  >
-                    📷 Add Photo
-                  </button>
-                  <span style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.4)' }}>
-                    Optional
-                  </span>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: '0.6rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  📷 Add Photos
+                </button>
+                <span style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.4)' }}>
+                  Optional - uploads to gallery
+                </span>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                onChange={handlePinPhotoUpload}
+                multiple
+                onChange={handlePinPhotoSelect}
                 style={{ display: 'none' }}
               />
+              {pinPhotos.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                  {pinPhotos.map((file, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Photo ${index + 1}`}
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          objectFit: 'cover',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePinPhoto(index)}
+                        style={{
+                          position: 'absolute',
+                          top: '-6px',
+                          right: '-6px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: 'rgba(231, 76, 60, 0.9)',
+                          border: 'none',
+                          color: 'white',
+                          fontSize: '0.7rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               type="submit"

@@ -398,7 +398,7 @@ export default function WorldMap({ onCountryCount }: Props) {
       if (dayItems.length > 0) details += `✈️ ${dayItems.length} trip stop${dayItems.length !== 1 ? 's' : ''}<br/>`
       details += `</div>`
       
-      // Show individual pin details (date, notes, photo, delete)
+      // Show individual pin details (date, notes, delete)
       let pinDetails = ''
       if (pinItems.length > 0) {
         pinDetails = `<div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">`
@@ -407,9 +407,6 @@ export default function WorldMap({ onCountryCount }: Props) {
           if (pin.date) {
             const dateStr = new Date(pin.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             pinDetails += `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">📅 ${dateStr}</div>`
-          }
-          if (pin.url) {
-            pinDetails += `<img src="${pin.url}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 0.5rem;" />`
           }
           if (pin.notes) {
             pinDetails += `<div style="font-size: 0.85rem; color: #333; margin-bottom: 0.5rem;">${pin.notes}</div>`
