@@ -13,6 +13,8 @@ interface LocationItem {
   city?: string
   country?: string
   type: 'photo' | 'pin' | 'day'
+  date?: string
+  notes?: string
 }
 
 interface CityCluster {
@@ -85,7 +87,7 @@ export default function WorldMap({ onCountryCount }: Props) {
       
       const { data: photos } = await supabase
         .from('photos')
-        .select('id, url, latitude, longitude, location, trip_id')
+        .select('id, url, latitude, longitude, location, trip_id, taken_at, uploaded_at')
         .or('latitude.not.is.null,location.not.is.null')
 
       const { data: pins } = await supabase
@@ -140,7 +142,8 @@ export default function WorldMap({ onCountryCount }: Props) {
             location: photo.location || undefined,
             city: cached.city,
             country: cached.country,
-            type: 'photo'
+            type: 'photo',
+            date: photo.taken_at || photo.uploaded_at
           })
         } else {
           needsGeocoding.push(photo)
@@ -199,7 +202,8 @@ export default function WorldMap({ onCountryCount }: Props) {
               location: photo.location || undefined,
               city,
               country,
-              type: 'photo'
+              type: 'photo',
+              date: photo.taken_at || photo.uploaded_at
             })
           }
         } catch (error) {
@@ -243,6 +247,9 @@ export default function WorldMap({ onCountryCount }: Props) {
           }
 
           if (city && country && lat && lng) {
+            // If pin has a photo, treat it like a photo
+            const itemType = pin.photo_url ? 'photo' : 'pin'
+            
             allLocations.push({
               id: `pin-${pin.id}`,
               url: pin.photo_url || '',
@@ -251,7 +258,9 @@ export default function WorldMap({ onCountryCount }: Props) {
               location: pin.location || undefined,
               city,
               country,
-              type: 'pin'
+              type: itemType,
+              date: pin.date,
+              notes: pin.notes
             })
           }
         } catch (error) {
@@ -358,17 +367,16 @@ export default function WorldMap({ onCountryCount }: Props) {
     markers.current = []
 
     cityClusters.forEach(cluster => {
-      const photoCount = cluster.items.filter(i => i.type === 'photo').length
-      const pinCount = cluster.items.filter(i => i.type === 'pin').length
-      const dayCount = cluster.items.filter(i => i.type === 'day').length
       const totalCount = cluster.items.length
+      const photoItems = cluster.items.filter(i => i.type === 'photo')
+      const pinItems = cluster.items.filter(i => i.type === 'pin')
 
       const el = document.createElement('div')
       el.className = 'marker'
       el.style.width = '28px'
       el.style.height = '28px'
       el.style.borderRadius = '50%'
-      el.style.background = pinCount > 0 && photoCount === 0
+      el.style.background = pinItems.length > 0 && photoItems.length === 0
         ? 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)'
         : 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
       el.style.border = '2px solid white'
@@ -384,20 +392,39 @@ export default function WorldMap({ onCountryCount }: Props) {
       el.innerHTML = totalCount > 1 ? `${totalCount}` : '📍'
 
       // Build popup content
-      const photoIds = cluster.items.filter(i => i.type === 'photo').map(i => i.id).join(',')
+      const dayItems = cluster.items.filter(i => i.type === 'day')
+      
+      const photoIds = photoItems.map(i => i.id).join(',')
       const tripId = cluster.tripIds[0]
       
       let details = `<div style="margin-top: 0.5rem; font-size: 0.85rem;">`
-      if (photoCount > 0) details += `📸 ${photoCount} photo${photoCount !== 1 ? 's' : ''}<br/>`
-      if (pinCount > 0) details += `📍 ${pinCount} pin${pinCount !== 1 ? 's' : ''}<br/>`
-      if (dayCount > 0) details += `✈️ ${dayCount} trip stop${dayCount !== 1 ? 's' : ''}<br/>`
+      if (photoItems.length > 0) details += `📸 ${photoItems.length} photo${photoItems.length !== 1 ? 's' : ''}<br/>`
+      if (pinItems.length > 0) details += `📍 ${pinItems.length} pin${pinItems.length !== 1 ? 's' : ''}<br/>`
+      if (dayItems.length > 0) details += `✈️ ${dayItems.length} trip stop${dayItems.length !== 1 ? 's' : ''}<br/>`
       details += `</div>`
+      
+      // Show individual pin details (date and notes)
+      let pinDetails = ''
+      if (pinItems.length > 0) {
+        pinDetails = `<div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">`
+        pinItems.forEach(pin => {
+          if (pin.date) {
+            const dateStr = new Date(pin.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            pinDetails += `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">📅 ${dateStr}</div>`
+          }
+          if (pin.notes) {
+            pinDetails += `<div style="font-size: 0.85rem; color: #333; margin-bottom: 0.5rem;">${pin.notes}</div>`
+          }
+        })
+        pinDetails += `</div>`
+      }
 
       const popupContent = `
         <div style="color: black; padding: 0.5rem; min-width: 200px;">
           <strong style="font-size: 1.1rem;">${cluster.city}</strong><br/>
           <span style="color: #666; font-size: 0.9rem;">${cluster.country}</span>
           ${details}
+          ${pinDetails}
           <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
             ${photoIds ? `
               <button onclick="window.__viewPhotos?.('${photoIds}', '${cluster.city}, ${cluster.country}')" style="flex: 1; padding: 0.5rem; border: none; background: #D4AF37; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
