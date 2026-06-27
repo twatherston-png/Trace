@@ -28,6 +28,8 @@ interface CityCluster {
 
 interface Props {
   onCountryCount?: (count: number) => void
+  flyToLocation?: { lat: number; lng: number } | null
+  onFlyComplete?: () => void
 }
 
 // Normalize city names to handle variations from Mapbox
@@ -54,7 +56,7 @@ const normalizeCityName = (city: string): string => {
   return normalizations[lower] || city
 }
 
-export default function WorldMap({ onCountryCount }: Props) {
+export default function WorldMap({ onCountryCount, flyToLocation, onFlyComplete }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const markers = useRef<mapboxgl.Marker[]>([])
@@ -104,6 +106,18 @@ export default function WorldMap({ onCountryCount }: Props) {
       }
     }
   }, [])
+
+  // Fly to location when requested from photo lightbox
+  useEffect(() => {
+    if (flyToLocation && map.current) {
+      map.current.flyTo({
+        center: [flyToLocation.lng, flyToLocation.lat],
+        zoom: 12,
+        duration: 2000
+      })
+      onFlyComplete?.()
+    }
+  }, [flyToLocation, onFlyComplete])
 
   useEffect(() => {
     const loadAllLocations = async () => {

@@ -1,12 +1,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import type { Trip } from '../types'
 import TopBar from '../components/TopBar'
 import BottomNav from '../components/BottomNav'
 import WorldMap from '../components/WorldMap'
 
 export default function Dashboard() {
+  const location = useLocation()
   const [trips, setTrips] = useState<Trip[]>([])
   const [stats, setStats] = useState({ trips: 0, photos: 0, countries: 0 })
   const [showCreateTrip, setShowCreateTrip] = useState(false)
@@ -17,8 +18,19 @@ export default function Dashboard() {
   const [geocoding, setGeocoding] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, percent: 0 })
+  const [flyToLocation, setFlyToLocation] = useState<{ lat: number, lng: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
+
+  // Listen for viewLocation state from photo lightbox
+  useEffect(() => {
+    const state = location.state as { viewLocation?: { lat: number, lng: number } } | null
+    if (state?.viewLocation) {
+      setFlyToLocation(state.viewLocation)
+      // Clear the state so it doesn't trigger again
+      navigate('', { replace: true })
+    }
+  }, [location, navigate])
 
   useEffect(() => {
     loadData()
@@ -248,7 +260,7 @@ export default function Dashboard() {
 
         {/* World Map */}
         <div style={{ marginBottom: '2rem' }}>
-          <WorldMap onCountryCount={handleCountryCount} />
+          <WorldMap onCountryCount={handleCountryCount} flyToLocation={flyToLocation} onFlyComplete={() => setFlyToLocation(null)} />
         </div>
 
         {/* Stats */}

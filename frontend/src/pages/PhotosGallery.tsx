@@ -1040,6 +1040,10 @@ export default function PhotosGallery() {
             setSelectedPhoto(null)
             handleOpenEdit(selectedPhoto)
           }}
+          onViewOnMap={(lat: number, lng: number) => {
+            setSelectedPhoto(null)
+            navigate('/', { state: { viewLocation: { lat, lng } } })
+          }}
           onDelete={async (photoId: string, photoUrl: string) => {
             await handleDeletePhoto(photoId, photoUrl)
             const remaining = displayPhotos.filter(p => p.id !== photoId)

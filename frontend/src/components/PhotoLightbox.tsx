@@ -9,6 +9,7 @@ interface PhotoLightboxProps {
   onEdit?: () => void
   onDelete: (photoId: string, photoUrl: string) => void
   onSetCover: (photoUrl: string) => void
+  onViewOnMap?: (lat: number, lng: number) => void
 }
 
 export default function PhotoLightbox({
@@ -18,7 +19,8 @@ export default function PhotoLightbox({
   onNavigate,
   onEdit,
   onDelete,
-  onSetCover
+  onSetCover,
+  onViewOnMap
 }: PhotoLightboxProps) {
   const touchStartX = useRef<number | null>(null)
   const touchEndX = useRef<number | null>(null)
@@ -196,6 +198,25 @@ export default function PhotoLightbox({
             >
               🖼️ Set as Cover
             </button>
+            {photo.latitude && photo.longitude && onViewOnMap && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onViewOnMap(photo.latitude!, photo.longitude!); (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '1rem 1.25rem',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '1rem'
+                }}
+              >
+                🗺️ View on Map
+              </button>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(photo.id, photo.url); (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }}
               style={{
