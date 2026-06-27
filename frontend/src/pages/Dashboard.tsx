@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import type { Trip } from '../types'
@@ -56,6 +56,10 @@ export default function Dashboard() {
       setStats(prev => ({ ...prev, photos: photosCount }))
     }
   }
+
+  const handleCountryCount = useCallback((count: number) => {
+    setStats(prev => ({ ...prev, countries: count }))
+  }, [])
 
   const handleCreateTrip = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -160,7 +164,7 @@ export default function Dashboard() {
 
         {/* World Map */}
         <div style={{ marginBottom: '2rem' }}>
-          <WorldMap onCountryCount={(count) => setStats(prev => ({ ...prev, countries: count }))} />
+          <WorldMap onCountryCount={handleCountryCount} />
         </div>
 
         {/* Stats */}
