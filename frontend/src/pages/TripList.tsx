@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import type { Trip } from '../types'
@@ -9,9 +9,6 @@ export default function TripList() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [showCreateTrip, setShowCreateTrip] = useState(false)
   const [newTrip, setNewTrip] = useState({ name: '', start_date: '', end_date: '', notes: '' })
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
   const navigate = useNavigate()
 
@@ -67,74 +64,6 @@ export default function TripList() {
     }
   }
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    setUploading(true)
-    setUploadProgress(0)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setNotification({ type: 'error', message: 'Not logged in' })
-      setUploading(false)
-      return
-    }
-
-    let successCount = 0
-    let errorCount = 0
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      const fileName = `${Date.now()}-${file.name}`
-      
-      try {
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('photos')
-          .upload(fileName, file)
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError)
-          errorCount++
-          continue
-        }
-
-        if (uploadData) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('photos')
-            .getPublicUrl(fileName)
-
-          const { error: insertError } = await supabase.from('photos').insert({
-            trip_id: trips[0]?.id || null,
-            url: publicUrl,
-            caption: file.name
-          })
-
-          if (insertError) {
-            console.error('Insert error:', insertError)
-            errorCount++
-          } else {
-            successCount++
-          }
-        }
-      } catch (err) {
-        console.error('Unexpected error:', err)
-        errorCount++
-      }
-
-      setUploadProgress(((i + 1) / files.length) * 100)
-    }
-
-    setUploading(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-
-    if (successCount > 0) {
-      setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''} successfully!` })
-    }
-    if (errorCount > 0) {
-      setNotification({ type: 'error', message: `Failed to upload ${errorCount} photo${errorCount > 1 ? 's' : ''}` })
-    }
-  }
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -164,60 +93,6 @@ export default function TripList() {
             fontWeight: 500
           }}>
             {notification.message}
-          </div>
-        )}
-
-        {/* Upload Photos Button */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handlePhotoUpload}
-          multiple
-          accept="image/*"
-          style={{ display: 'none' }}
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="gold-glow"
-          style={{
-            width: '100%',
-            padding: '1.1rem',
-            marginBottom: uploading ? '0.5rem' : '1rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(212, 175, 55, 0.2)',
-            background: 'linear-gradient(135deg, rgba(74, 45, 107, 0.8) 0%, rgba(107, 77, 142, 0.8) 100%)',
-            backdropFilter: 'blur(10px)',
-            color: 'white',
-            fontWeight: 600,
-            cursor: uploading ? 'not-allowed' : 'pointer',
-            fontSize: '0.95rem',
-            opacity: uploading ? 0.7 : 1,
-            transition: 'all 0.3s ease',
-            letterSpacing: '0.02em'
-          }}
-        >
-          {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : '+ Upload Photos'}
-        </button>
-
-        {/* Upload Progress Bar */}
-        {uploading && (
-          <div style={{
-            width: '100%',
-            height: '6px',
-            background: 'rgba(255, 255, 255, 0.06)',
-            borderRadius: '3px',
-            marginBottom: '1rem',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              width: `${uploadProgress}%`,
-              height: '100%',
-              background: 'linear-gradient(90deg, #D4AF37 0%, #E5C458 50%, #D4AF37 100%)',
-              borderRadius: '3px',
-              transition: 'width 0.3s ease',
-              boxShadow: '0 0 10px rgba(212, 175, 55, 0.5)'
-            }} />
           </div>
         )}
 
