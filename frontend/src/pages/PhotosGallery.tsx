@@ -74,6 +74,8 @@ export default function PhotosGallery() {
     const files = e.target.files
     if (!files || files.length === 0) return
 
+    alert(`Starting upload of ${files.length} photo(s)`)
+
     setUploading(true)
     setUploadProgress(0)
 
@@ -137,12 +139,13 @@ export default function PhotosGallery() {
     if (fileInputRef.current) fileInputRef.current.value = ''
 
     if (successCount > 0) {
-      console.log('Upload success, showing metadata modal for', uploadedPhotoIds.length, 'photos')
+      alert(`Upload success! ${successCount} photo(s) uploaded. About to show metadata modal.`)
       await loadPhotos()
       setUploadedPhotoIds(uploadedPhotoIds)
       setExtractedExif(extractedExif)
-      console.log('Setting showMetadataModal to true, extractedExif:', extractedExif)
+      alert(`Setting modal state: uploadedPhotoIds=${uploadedPhotoIds.length}, hasExif=${!!extractedExif.date}`)
       setShowMetadataModal(true)
+      alert(`Modal should now be visible`)
       setNotification({ type: 'success', message: `Uploaded ${successCount} photo${successCount > 1 ? 's' : ''}!` })
     }
     if (errorCount > 0) {
