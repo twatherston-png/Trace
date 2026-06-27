@@ -28,6 +28,7 @@ export default function PhotosGallery() {
   const [extractedExif, setExtractedExif] = useState<{ date?: string; latitude?: number; longitude?: number }>({})
   const [bulkDate, setBulkDate] = useState('')
   const [bulkLocation, setBulkLocation] = useState('')
+  const [bulkTripId, setBulkTripId] = useState('')
   
   // Edit form state
   const [editDate, setEditDate] = useState('')
@@ -149,32 +150,48 @@ export default function PhotosGallery() {
 
   const extractExifData = async (file: File): Promise<{ date?: string; latitude?: number; longitude?: number }> => {
     return new Promise((resolve) => {
-      EXIF.getData(file as any, function(this: any) {
-        const result: { date?: string; latitude?: number; longitude?: number } = {}
-        
-        // Extract date
-        const exifDate = EXIF.getTag(this, 'DateTimeOriginal')
-        if (exifDate) {
-          // Format: "2024:01:15 10:30:00"
-          const match = exifDate.match(/(\d{4}):(\d{2}):(\d{2})/)
-          if (match) {
-            result.date = `${match[1]}-${match[2]}-${match[3]}`
+      // Timeout after 3 seconds in case EXIF hangs
+      const timeout = setTimeout(() => {
+        console.warn('EXIF extraction timed out for', file.name)
+        resolve({})
+      }, 3000)
+      
+      try {
+        EXIF.getData(file as any, function(this: any) {
+          clearTimeout(timeout)
+          const result: { date?: string; latitude?: number; longitude?: number } = {}
+          
+          try {
+            // Extract date
+            const exifDate = EXIF.getTag(this, 'DateTimeOriginal')
+            if (exifDate) {
+              const match = exifDate.match(/(\d{4}):(\d{2}):(\d{2})/)
+              if (match) {
+                result.date = `${match[1]}-${match[2]}-${match[3]}`
+              }
+            }
+            
+            // Extract GPS coordinates
+            const latitude = EXIF.getTag(this, 'GPSLatitude')
+            const longitude = EXIF.getTag(this, 'GPSLongitude')
+            const latRef = EXIF.getTag(this, 'GPSLatitudeRef')
+            const lonRef = EXIF.getTag(this, 'GPSLongitudeRef')
+            
+            if (latitude && longitude) {
+              result.latitude = convertDMSToDD(latitude, latRef)
+              result.longitude = convertDMSToDD(longitude, lonRef)
+            }
+          } catch (err) {
+            console.warn('EXIF parse error:', err)
           }
-        }
-        
-        // Extract GPS coordinates
-        const latitude = EXIF.getTag(this, 'GPSLatitude')
-        const longitude = EXIF.getTag(this, 'GPSLongitude')
-        const latRef = EXIF.getTag(this, 'GPSLatitudeRef')
-        const lonRef = EXIF.getTag(this, 'GPSLongitudeRef')
-        
-        if (latitude && longitude) {
-          result.latitude = convertDMSToDD(latitude, latRef)
-          result.longitude = convertDMSToDD(longitude, lonRef)
-        }
-        
-        resolve(result)
-      })
+          
+          resolve(result)
+        })
+      } catch (err) {
+        clearTimeout(timeout)
+        console.warn('EXIF extraction failed:', err)
+        resolve({})
+      }
     })
   }
 
@@ -185,23 +202,26 @@ export default function PhotosGallery() {
     return dd
   }
 
-  const handleApplyMetadata = async (option: 'exif' | 'bulk' | 'blank', bulkDate?: string, bulkLocation?: string) => {
+  const handleApplyMetadata = async (option: 'exif' | 'bulk' | 'blank', bulkDate?: string, bulkLocation?: string, bulkTripId?: string) => {
     if (!uploadedPhotoIds.length) return
 
+    const updates: any = {}
+    
     if (option === 'exif' && extractedExif.date) {
-      await supabase
-        .from('photos')
-        .update({
-          taken_at: extractedExif.date,
-          latitude: extractedExif.latitude,
-          longitude: extractedExif.longitude
-        })
-        .in('id', uploadedPhotoIds)
-    } else if (option === 'bulk' && (bulkDate || bulkLocation)) {
-      const updates: any = {}
+      updates.taken_at = extractedExif.date
+      if (extractedExif.latitude) updates.latitude = extractedExif.latitude
+      if (extractedExif.longitude) updates.longitude = extractedExif.longitude
+    } else if (option === 'bulk') {
       if (bulkDate) updates.taken_at = bulkDate
       if (bulkLocation) updates.location = bulkLocation
-      
+    }
+    
+    // Handle trip assignment
+    if (bulkTripId !== undefined) {
+      updates.trip_id = bulkTripId || null
+    }
+    
+    if (Object.keys(updates).length > 0) {
       await supabase
         .from('photos')
         .update(updates)
@@ -213,6 +233,7 @@ export default function PhotosGallery() {
     setExtractedExif({})
     setBulkDate('')
     setBulkLocation('')
+    setBulkTripId('')
     setNotification({ type: 'success', message: 'Metadata applied successfully!' })
     loadPhotos()
   }
@@ -1361,7 +1382,7 @@ export default function PhotosGallery() {
             </p>
 
             <button
-              onClick={() => handleApplyMetadata('exif')}
+              onClick={() => handleApplyMetadata('exif', undefined, undefined, bulkTripId)}
               disabled={!extractedExif.date}
               className="glass-card"
               style={{
@@ -1395,7 +1416,7 @@ export default function PhotosGallery() {
             </button>
 
             <button
-              onClick={() => handleApplyMetadata('bulk', bulkDate, bulkLocation)}
+              onClick={() => handleApplyMetadata('bulk', bulkDate, bulkLocation, bulkTripId)}
               disabled={!bulkDate && !bulkLocation}
               className="glass-card"
               style={{
@@ -1453,8 +1474,34 @@ export default function PhotosGallery() {
               />
             </button>
 
+            {/* Trip Selector */}
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ color: 'rgba(212, 175, 55, 0.7)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem', fontWeight: 500, letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                Assign to Trip
+              </label>
+              <select
+                value={bulkTripId}
+                onChange={(e) => setBulkTripId(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: '100%',
+                  padding: '0.6rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: 'white',
+                  fontSize: '0.9rem'
+                }}
+              >
+                <option value="" style={{ background: '#2D1B4E' }}>No trip</option>
+                {trips.map(t => (
+                  <option key={t.id} value={t.id} style={{ background: '#2D1B4E' }}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
             <button
-              onClick={() => handleApplyMetadata('blank')}
+              onClick={() => handleApplyMetadata('blank', undefined, undefined, bulkTripId)}
               className="glass-card"
               style={{
                 width: '100%',
