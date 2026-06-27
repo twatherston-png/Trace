@@ -311,7 +311,9 @@ export default function PhotosGallery() {
       if (bulkLocation) {
         updates.location = bulkLocation
         // Geocode the location to get coordinates
+        console.log('Bulk geocoding location:', bulkLocation)
         const coords = await geocodeLocation(bulkLocation)
+        console.log('Bulk geocoding result:', coords)
         if (coords) {
           updates.latitude = coords.latitude
           updates.longitude = coords.longitude
@@ -407,12 +409,19 @@ export default function PhotosGallery() {
       day_id: autoDayId || null
     }
 
-    // Geocode location if it changed
-    if (editLocation && editLocation !== (editingPhoto.location || '')) {
-      const coords = await geocodeLocation(editLocation)
-      if (coords) {
-        updates.latitude = coords.latitude
-        updates.longitude = coords.longitude
+    // Geocode location if it exists and either changed or photo has no coordinates yet
+    if (editLocation) {
+      const locationChanged = editLocation !== (editingPhoto.location || '')
+      const hasNoCoords = !editingPhoto.latitude || !editingPhoto.longitude
+      
+      if (locationChanged || hasNoCoords) {
+        console.log('Geocoding location:', editLocation, 'Changed:', locationChanged, 'NoCoords:', hasNoCoords)
+        const coords = await geocodeLocation(editLocation)
+        console.log('Geocoding result:', coords)
+        if (coords) {
+          updates.latitude = coords.latitude
+          updates.longitude = coords.longitude
+        }
       }
     }
 
