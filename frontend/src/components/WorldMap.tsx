@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { supabase } from '../lib/supabase'
 
-interface PhotoLocation {
+interface LocationItem {
   id: string
   url: string
   latitude: number
@@ -12,6 +12,7 @@ interface PhotoLocation {
   location?: string
   city?: string
   country?: string
+  type: 'photo' | 'pin' | 'day'
 }
 
 interface CityCluster {
@@ -19,7 +20,7 @@ interface CityCluster {
   country: string
   latitude: number
   longitude: number
-  photos: PhotoLocation[]
+  items: LocationItem[]
   tripIds: string[]
 }
 
@@ -45,7 +46,6 @@ export default function WorldMap({ onCountryCount }: Props) {
 
   const handleForceRefresh = async () => {
     setStatus('Clearing cache and re-geocoding...')
-    // Clear all cached locations
     await supabase.from('photo_locations').delete().neq('photo_id', '')
     setForceRefresh(true)
     setRefreshKey(prev => prev + 1)
@@ -63,7 +63,7 @@ export default function WorldMap({ onCountryCount }: Props) {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v10', // Slightly lighter dark theme
+      style: 'mapbox://styles/mapbox/dark-v10',
       center: [0, 20],
       zoom: 0.5,
       projection: 'mercator'
@@ -79,69 +79,78 @@ export default function WorldMap({ onCountryCount }: Props) {
     }
   }, [])
 
-  // Load photos with GPS coordinates
   useEffect(() => {
-    const loadPhotos = async () => {
-      setStatus('Loading photos...')
+    const loadAllLocations = async () => {
+      setStatus('Loading locations...')
       
-      // Get photos with either GPS coordinates OR location text
-      const { data: photos, error } = await supabase
+      const { data: photos } = await supabase
         .from('photos')
         .select('id, url, latitude, longitude, location, trip_id')
         .or('latitude.not.is.null,location.not.is.null')
 
-      if (error) {
-        console.error('WorldMap: Error loading photos:', error)
-        setStatus('Error loading photos')
+      const { data: pins } = await supabase
+        .from('pins')
+        .select('id, date, location, latitude, longitude, notes, photo_url')
+
+      const { data: days } = await supabase
+        .from('days')
+        .select('id, date, location, latitude, longitude, trip_id')
+        .not('location', 'is', null)
+
+      const photoItems = photos || []
+      const pinItems = pins || []
+      const dayItems = days || []
+      const totalItems = photoItems.length + pinItems.length + dayItems.length
+
+      if (totalItems === 0) {
+        setStatus('No location data found')
         return
       }
 
-      if (!photos || photos.length === 0) {
-        setStatus('No photos with location data found')
-        return
-      }
+      setStatus(`Processing ${totalItems} locations...`)
 
-      setStatus(`Processing ${photos.length} photos...`)
+      const allLocations: LocationItem[] = []
 
-      // Check which photos already have city/country data cached
-      const photoIds = photos.map(p => p.id)
+      // Process photos
+      const photoIds = photoItems.map(p => p.id)
       let cachedMap = new Map()
       
-      if (!forceRefresh) {
+      if (!forceRefresh && photoIds.length > 0) {
         const { data: cachedLocations } = await supabase
           .from('photo_locations')
           .select('photo_id, city, country, latitude, longitude')
           .in('photo_id', photoIds)
 
         if (cachedLocations) {
-          cachedLocations.forEach(loc => {
-            cachedMap.set(loc.photo_id, loc)
-          })
+          cachedLocations.forEach(loc => cachedMap.set(loc.photo_id, loc))
         }
       }
 
-      // Separate photos into cached and needs geocoding
-      const needsGeocoding: PhotoLocation[] = []
-      const photoLocations: PhotoLocation[] = []
+      const needsGeocoding: typeof photoItems = []
 
-      photos.forEach(photo => {
+      photoItems.forEach(photo => {
         const cached = cachedMap.get(photo.id)
         if (cached && cached.city && cached.country) {
-          photoLocations.push({
-            ...photo,
+          allLocations.push({
+            id: photo.id,
+            url: photo.url,
             latitude: cached.latitude,
             longitude: cached.longitude,
+            trip_id: photo.trip_id || undefined,
+            location: photo.location || undefined,
             city: cached.city,
-            country: cached.country
+            country: cached.country,
+            type: 'photo'
           })
         } else {
           needsGeocoding.push(photo)
         }
       })
 
-      setStatus(`Geocoding ${needsGeocoding.length} locations...`)
+      if (needsGeocoding.length > 0) {
+        setStatus(`Geocoding ${needsGeocoding.length} photos...`)
+      }
 
-      // Geocode photos that don't have city/country data
       for (const photo of needsGeocoding) {
         try {
           let lat = photo.latitude
@@ -150,45 +159,29 @@ export default function WorldMap({ onCountryCount }: Props) {
           let country = ''
 
           if (lat && lng) {
-            // Has GPS, reverse geocode to get city/country
             const response = await fetch(
               `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&limit=1`
             )
             const data = await response.json()
-
-            if (data.features && data.features.length > 0) {
-              const feature = data.features[0]
-              const context = feature.context || []
-              
-              // Find city and country from context
-              const cityContext = context.find((c: any) => c.id.startsWith('place.'))
-              const countryContext = context.find((c: any) => c.id.startsWith('country.'))
-              
-              city = cityContext?.text || 'Unknown'
-              country = countryContext?.text || 'Unknown'
+            if (data.features?.length > 0) {
+              const context = data.features[0].context || []
+              city = context.find((c: any) => c.id.startsWith('place.'))?.text || 'Unknown'
+              country = context.find((c: any) => c.id.startsWith('country.'))?.text || 'Unknown'
             }
           } else if (photo.location) {
-            // Has text location, forward geocode to get coordinates
             const response = await fetch(
               `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(photo.location)}.json?access_token=${mapboxgl.accessToken}&limit=1`
             )
             const data = await response.json()
-
-            if (data.features && data.features.length > 0) {
-              const feature = data.features[0]
-              ;[lng, lat] = feature.center
-              
-              const context = feature.context || []
-              const cityContext = context.find((c: any) => c.id.startsWith('place.'))
-              const countryContext = context.find((c: any) => c.id.startsWith('country.'))
-              
-              city = cityContext?.text || feature.text || photo.location
-              country = countryContext?.text || 'Unknown'
+            if (data.features?.length > 0) {
+              ;[lng, lat] = data.features[0].center
+              const context = data.features[0].context || []
+              city = context.find((c: any) => c.id.startsWith('place.'))?.text || data.features[0].text || photo.location
+              country = context.find((c: any) => c.id.startsWith('country.'))?.text || 'Unknown'
             }
           }
 
           if (city && country && lat && lng) {
-            // Cache in database
             await supabase.from('photo_locations').upsert({
               photo_id: photo.id,
               city,
@@ -197,100 +190,222 @@ export default function WorldMap({ onCountryCount }: Props) {
               longitude: lng
             }, { onConflict: 'photo_id' })
 
-            photoLocations.push({
-              ...photo,
+            allLocations.push({
+              id: photo.id,
+              url: photo.url,
               latitude: lat,
               longitude: lng,
+              trip_id: photo.trip_id || undefined,
+              location: photo.location || undefined,
               city,
-              country
+              country,
+              type: 'photo'
             })
           }
         } catch (error) {
-          console.error('Geocoding error:', error)
+          console.error('Photo geocoding error:', error)
+        }
+      }
+
+      // Process pins
+      if (pinItems.length > 0) {
+        setStatus(`Processing ${pinItems.length} pins...`)
+      }
+      
+      for (const pin of pinItems) {
+        try {
+          let lat = pin.latitude
+          let lng = pin.longitude
+          let city = ''
+          let country = ''
+
+          if (lat && lng) {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
+            if (data.features?.length > 0) {
+              const context = data.features[0].context || []
+              city = context.find((c: any) => c.id.startsWith('place.'))?.text || 'Unknown'
+              country = context.find((c: any) => c.id.startsWith('country.'))?.text || 'Unknown'
+            }
+          } else if (pin.location) {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(pin.location)}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
+            if (data.features?.length > 0) {
+              ;[lng, lat] = data.features[0].center
+              const context = data.features[0].context || []
+              city = context.find((c: any) => c.id.startsWith('place.'))?.text || data.features[0].text || pin.location
+              country = context.find((c: any) => c.id.startsWith('country.'))?.text || 'Unknown'
+            }
+          }
+
+          if (city && country && lat && lng) {
+            allLocations.push({
+              id: `pin-${pin.id}`,
+              url: pin.photo_url || '',
+              latitude: lat,
+              longitude: lng,
+              location: pin.location || undefined,
+              city,
+              country,
+              type: 'pin'
+            })
+          }
+        } catch (error) {
+          console.error('Pin geocoding error:', error)
+        }
+      }
+
+      // Process trip days
+      if (dayItems.length > 0) {
+        setStatus(`Processing ${dayItems.length} trip locations...`)
+      }
+      
+      for (const day of dayItems) {
+        try {
+          let lat = day.latitude
+          let lng = day.longitude
+          let city = ''
+          let country = ''
+
+          if (lat && lng) {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
+            if (data.features?.length > 0) {
+              const context = data.features[0].context || []
+              city = context.find((c: any) => c.id.startsWith('place.'))?.text || 'Unknown'
+              country = context.find((c: any) => c.id.startsWith('country.'))?.text || 'Unknown'
+            }
+          } else if (day.location) {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(day.location)}.json?access_token=${mapboxgl.accessToken}&limit=1`
+            )
+            const data = await response.json()
+            if (data.features?.length > 0) {
+              ;[lng, lat] = data.features[0].center
+              const context = data.features[0].context || []
+              city = context.find((c: any) => c.id.startsWith('place.'))?.text || data.features[0].text || day.location
+              country = context.find((c: any) => c.id.startsWith('country.'))?.text || 'Unknown'
+            }
+          }
+
+          if (city && country && lat && lng) {
+            allLocations.push({
+              id: `day-${day.id}`,
+              url: '',
+              latitude: lat,
+              longitude: lng,
+              trip_id: day.trip_id || undefined,
+              location: day.location || undefined,
+              city,
+              country,
+              type: 'day'
+            })
+          }
+        } catch (error) {
+          console.error('Day geocoding error:', error)
         }
       }
 
       // Cluster by city
       const clusterMap = new Map<string, CityCluster>()
 
-      photoLocations.forEach(photo => {
-        if (!photo.city || !photo.country) return
+      allLocations.forEach(item => {
+        if (!item.city || !item.country) return
 
-        const key = `${photo.city}-${photo.country}`
+        const key = `${item.city}-${item.country}`
         
         if (!clusterMap.has(key)) {
           clusterMap.set(key, {
-            city: photo.city,
-            country: photo.country,
-            latitude: photo.latitude,
-            longitude: photo.longitude,
-            photos: [],
+            city: item.city,
+            country: item.country,
+            latitude: item.latitude,
+            longitude: item.longitude,
+            items: [],
             tripIds: []
           })
         }
 
         const cluster = clusterMap.get(key)!
-        cluster.photos.push(photo)
-        if (photo.trip_id && !cluster.tripIds.includes(photo.trip_id)) {
-          cluster.tripIds.push(photo.trip_id)
+        cluster.items.push(item)
+        if (item.trip_id && !cluster.tripIds.includes(item.trip_id)) {
+          cluster.tripIds.push(item.trip_id)
         }
       })
 
       const clusters = Array.from(clusterMap.values())
       setCityClusters(clusters)
 
-      // Count unique countries
       const countries = new Set(clusters.map(c => c.country))
       setCountryCount(countries.size)
       onCountryCount?.(countries.size)
       setStatus(`${clusters.length} locations, ${countries.size} countries`)
     }
 
-    loadPhotos()
-  }, [refreshKey])
+    loadAllLocations()
+  }, [refreshKey, onCountryCount])
 
   // Render markers
   useEffect(() => {
     if (!map.current || cityClusters.length === 0) return
 
-    // Clear existing markers
     markers.current.forEach(marker => marker.remove())
     markers.current = []
 
     cityClusters.forEach(cluster => {
+      const photoCount = cluster.items.filter(i => i.type === 'photo').length
+      const pinCount = cluster.items.filter(i => i.type === 'pin').length
+      const dayCount = cluster.items.filter(i => i.type === 'day').length
+      const totalCount = cluster.items.length
+
       const el = document.createElement('div')
       el.className = 'marker'
-      el.style.width = '24px'
-      el.style.height = '24px'
+      el.style.width = '28px'
+      el.style.height = '28px'
       el.style.borderRadius = '50%'
-      el.style.background = 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
+      el.style.background = pinCount > 0 && photoCount === 0
+        ? 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)'
+        : 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
       el.style.border = '2px solid white'
       el.style.cursor = 'pointer'
       el.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
       el.style.display = 'flex'
       el.style.alignItems = 'center'
       el.style.justifyContent = 'center'
-      el.style.fontSize = '10px'
+      el.style.fontSize = '11px'
       el.style.fontWeight = 'bold'
       el.style.color = '#2D1B4E'
 
-      el.innerHTML = cluster.photos.length > 1 ? `${cluster.photos.length}` : '📍'
+      el.innerHTML = totalCount > 1 ? `${totalCount}` : '📍'
 
-      const photoIds = cluster.photos.map(p => p.id).join(',')
+      // Build popup content
+      const photoIds = cluster.items.filter(i => i.type === 'photo').map(i => i.id).join(',')
+      const tripId = cluster.tripIds[0]
+      
+      let details = `<div style="margin-top: 0.5rem; font-size: 0.85rem;">`
+      if (photoCount > 0) details += `📸 ${photoCount} photo${photoCount !== 1 ? 's' : ''}<br/>`
+      if (pinCount > 0) details += `📍 ${pinCount} pin${pinCount !== 1 ? 's' : ''}<br/>`
+      if (dayCount > 0) details += `✈️ ${dayCount} trip stop${dayCount !== 1 ? 's' : ''}<br/>`
+      details += `</div>`
+
       const popupContent = `
         <div style="color: black; padding: 0.5rem; min-width: 200px;">
           <strong style="font-size: 1.1rem;">${cluster.city}</strong><br/>
           <span style="color: #666; font-size: 0.9rem;">${cluster.country}</span>
-          <div style="margin-top: 0.5rem; font-size: 0.85rem;">
-            📸 ${cluster.photos.length} photo${cluster.photos.length !== 1 ? 's' : ''}
-            ${cluster.tripIds.length > 0 ? `<br/>✈️ ${cluster.tripIds.length} trip${cluster.tripIds.length !== 1 ? 's' : ''}` : ''}
-          </div>
-          <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
-            <button onclick="window.__viewPhotos?.('${photoIds}', '${cluster.city}, ${cluster.country}')" style="flex: 1; padding: 0.5rem; border: none; background: #D4AF37; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
-              View Photos
-            </button>
-            ${cluster.tripIds.length > 0 ? `
-              <button onclick="window.__viewTrip?.('${cluster.tripIds[0]}')" style="flex: 1; padding: 0.5rem; border: none; background: #6B4D8E; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
+          ${details}
+          <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            ${photoIds ? `
+              <button onclick="window.__viewPhotos?.('${photoIds}', '${cluster.city}, ${cluster.country}')" style="flex: 1; padding: 0.5rem; border: none; background: #D4AF37; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
+                View Photos
+              </button>
+            ` : ''}
+            ${tripId ? `
+              <button onclick="window.__viewTrip?.('${tripId}')" style="flex: 1; padding: 0.5rem; border: none; background: #6B4D8E; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
                 View Trip
               </button>
             ` : ''}
@@ -300,9 +415,7 @@ export default function WorldMap({ onCountryCount }: Props) {
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat([cluster.longitude, cluster.latitude])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent)
-        )
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
         .addTo(map.current!)
 
       markers.current.push(marker)
@@ -311,7 +424,6 @@ export default function WorldMap({ onCountryCount }: Props) {
 
   return (
     <div style={{ position: 'relative' }}>
-      {/* Country counter */}
       <div style={{
         position: 'absolute',
         top: '10px',
@@ -355,7 +467,6 @@ export default function WorldMap({ onCountryCount }: Props) {
         }} 
       />
       
-      {/* Status indicator + refresh */}
       <div style={{
         position: 'absolute',
         bottom: '10px',
