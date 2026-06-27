@@ -280,6 +280,23 @@ export default function PhotosGallery() {
     return dd
   }
 
+  const geocodeLocation = async (location: string): Promise<{ latitude: number; longitude: number } | null> => {
+    if (!location) return null
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(location)}.json?access_token=${import.meta.env.VITE_MAPBOX_TOKEN}&limit=1`
+      )
+      const data = await response.json()
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center
+        return { latitude: lat, longitude: lng }
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error)
+    }
+    return null
+  }
+
   const handleApplyMetadata = async (option: 'exif' | 'bulk' | 'blank', bulkDate?: string, bulkLocation?: string, bulkTripId?: string) => {
     if (!uploadedPhotoIds.length) return
 
@@ -291,7 +308,15 @@ export default function PhotosGallery() {
       if (extractedExif.longitude) updates.longitude = extractedExif.longitude
     } else if (option === 'bulk') {
       if (bulkDate) updates.taken_at = bulkDate
-      if (bulkLocation) updates.location = bulkLocation
+      if (bulkLocation) {
+        updates.location = bulkLocation
+        // Geocode the location to get coordinates
+        const coords = await geocodeLocation(bulkLocation)
+        if (coords) {
+          updates.latitude = coords.latitude
+          updates.longitude = coords.longitude
+        }
+      }
     }
     
     // Handle trip assignment
@@ -373,16 +398,27 @@ export default function PhotosGallery() {
       }
     }
 
+    const updates: any = {
+      taken_at: editDate || null,
+      location: editLocation || null,
+      notes: editNotes || null,
+      journal_entry: editJournal || null,
+      trip_id: editTripId || null,
+      day_id: autoDayId || null
+    }
+
+    // Geocode location if it changed
+    if (editLocation && editLocation !== (editingPhoto.location || '')) {
+      const coords = await geocodeLocation(editLocation)
+      if (coords) {
+        updates.latitude = coords.latitude
+        updates.longitude = coords.longitude
+      }
+    }
+
     const { error } = await supabase
       .from('photos')
-      .update({
-        taken_at: editDate || null,
-        location: editLocation || null,
-        notes: editNotes || null,
-        journal_entry: editJournal || null,
-        trip_id: editTripId || null,
-        day_id: autoDayId || null
-      })
+      .update(updates)
       .eq('id', editingPhoto.id)
 
     if (error) {
