@@ -128,6 +128,9 @@ export default function Dashboard() {
     // If photos are added, only create photos (no separate pin)
     // The pin will appear automatically from photo location data
     if (pinPhotos.length > 0) {
+      let successCount = 0
+      let errorCount = 0
+
       for (const file of pinPhotos) {
         const fileExt = file.name.split('.').pop()
         const fileName = `${user.id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
@@ -139,6 +142,7 @@ export default function Dashboard() {
 
         if (uploadError) {
           console.error('Error uploading photo:', uploadError)
+          errorCount++
           continue
         }
 
@@ -147,7 +151,7 @@ export default function Dashboard() {
           .getPublicUrl(filePath)
 
         if (data?.publicUrl) {
-          await supabase.from('photos').insert({
+          const { error: insertError } = await supabase.from('photos').insert({
             user_id: user.id,
             url: data.publicUrl,
             taken_at: newPin.date || null,
@@ -156,8 +160,29 @@ export default function Dashboard() {
             longitude,
             trip_id: null
           })
+
+          if (insertError) {
+            console.error('Error inserting photo:', insertError)
+            errorCount++
+          } else {
+            successCount++
+          }
         }
       }
+
+      if (errorCount > 0) {
+        alert(`Failed to add ${errorCount} photo(s): check console for details`)
+      }
+
+      if (successCount === 0) {
+        setGeocoding(false)
+        return
+      }
+
+      setShowAddPin(false)
+      setNewPin({ date: '', location: '', notes: '' })
+      setPinPhotos([])
+      window.location.reload()
     } else {
       // No photos - create standalone pin
       const { error: pinError } = await supabase.from('pins').insert({
@@ -173,12 +198,12 @@ export default function Dashboard() {
         alert('Failed to create pin: ' + pinError.message)
         return
       }
-    }
 
-    setShowAddPin(false)
-    setNewPin({ date: '', location: '', notes: '' })
-    setPinPhotos([])
-    window.location.reload()
+      setShowAddPin(false)
+      setNewPin({ date: '', location: '', notes: '' })
+      setPinPhotos([])
+      window.location.reload()
+    }
   }
 
   const handlePinPhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
