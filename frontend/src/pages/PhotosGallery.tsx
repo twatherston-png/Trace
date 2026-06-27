@@ -34,6 +34,8 @@ export default function PhotosGallery() {
   const [bulkDate, setBulkDate] = useState('')
   const [bulkLocation, setBulkLocation] = useState('')
   const [bulkTripId, setBulkTripId] = useState('')
+  const [filterValue, setFilterValue] = useState('')
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   
   // Edit form state
   const [editDate, setEditDate] = useState('')
@@ -58,6 +60,67 @@ export default function PhotosGallery() {
       setFilteredPhotos(null)
     }
   }, [locationState, photos])
+
+  // Compute available filter options based on current sort mode
+  const getFilterOptions = () => {
+    const options = new Set<string>()
+    
+    if (sortBy === 'date') {
+      // Extract unique months from photos
+      photos.forEach(photo => {
+        const date = new Date(photo.uploaded_at)
+        const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        options.add(monthYear)
+      })
+    } else if (sortBy === 'trip') {
+      // Extract unique trip names
+      photos.forEach(photo => {
+        const tripName = (photo as any).trips?.name
+        if (tripName) options.add(tripName)
+      })
+    } else if (sortBy === 'location') {
+      // Extract unique locations
+      photos.forEach(photo => {
+        if (photo.location) options.add(photo.location)
+      })
+    }
+    
+    return Array.from(options).sort()
+  }
+
+  const filterOptions = getFilterOptions()
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setShowFilterDropdown(false)
+    if (showFilterDropdown) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showFilterDropdown])
+
+  // Apply filter to photos
+  const getFilteredPhotos = () => {
+    let basePhotos = filteredPhotos || photos
+    
+    if (!filterValue) return basePhotos
+    
+    return basePhotos.filter(photo => {
+      if (sortBy === 'date') {
+        const date = new Date(photo.uploaded_at)
+        const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        return monthYear === filterValue
+      } else if (sortBy === 'trip') {
+        const tripName = (photo as any).trips?.name
+        return tripName === filterValue
+      } else if (sortBy === 'location') {
+        return photo.location === filterValue
+      }
+      return true
+    })
+  }
+
+  const displayPhotos = getFilteredPhotos()
 
   const loadTrips = async () => {
     const { data } = await supabase.from('trips').select('*').order('start_date', { ascending: false })
@@ -485,7 +548,6 @@ export default function PhotosGallery() {
     }
   }
 
-  const displayPhotos = filteredPhotos || photos
   const sortedPhotos = [...displayPhotos].sort((a, b) => {
     if (sortBy === 'date') {
       return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
@@ -590,7 +652,10 @@ export default function PhotosGallery() {
           {(['date', 'trip', 'location'] as const).map(sort => (
             <button
               key={sort}
-              onClick={() => setSortBy(sort)}
+              onClick={() => {
+                setSortBy(sort)
+                setFilterValue('')
+              }}
               style={{
                 padding: '0.55rem 1rem',
                 borderRadius: '10px',
@@ -657,6 +722,119 @@ export default function PhotosGallery() {
           </button>
         </div>
 
+        {/* Filter/Search Bar */}
+        <div style={{ position: 'relative', marginBottom: '1rem' }}>
+          <input
+            type="text"
+            value={filterValue}
+            onChange={(e) => {
+              setFilterValue(e.target.value)
+              setShowFilterDropdown(true)
+            }}
+            onFocus={() => setShowFilterDropdown(true)}
+            placeholder={
+              sortBy === 'date' ? 'Search by month (e.g., January 2026)' :
+              sortBy === 'trip' ? 'Search by trip name' :
+              'Search by location'
+            }
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(45, 27, 78, 0.6)',
+              backdropFilter: 'blur(10px)',
+              color: 'white',
+              fontSize: '0.9rem',
+              outline: 'none',
+              transition: 'all 0.3s ease'
+            }}
+          />
+          {filterValue && (
+            <button
+              onClick={() => {
+                setFilterValue('')
+                setShowFilterDropdown(false)
+              }}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255, 255, 255, 0.6)',
+                cursor: 'pointer',
+                fontSize: '1.2rem',
+                padding: '0',
+                lineHeight: 1
+              }}
+            >
+              ×
+            </button>
+          )}
+          
+          {/* Dropdown with matching options */}
+          {showFilterDropdown && filterValue && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '0.5rem',
+                background: 'rgba(45, 27, 78, 0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                zIndex: 100,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+              }}
+            >
+              {filterOptions
+                .filter(opt => opt.toLowerCase().includes(filterValue.toLowerCase()))
+                .slice(0, 10)
+                .map((option, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setFilterValue(option)
+                      setShowFilterDropdown(false)
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: idx < Math.min(filterOptions.filter(o => o.toLowerCase().includes(filterValue.toLowerCase())).length, 10) - 1 ? '1px solid rgba(255, 255, 255, 0.05)' : 'none',
+                      color: 'white',
+                      fontSize: '0.9rem',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(212, 175, 55, 0.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    {option}
+                  </button>
+                ))}
+              {filterOptions.filter(opt => opt.toLowerCase().includes(filterValue.toLowerCase())).length === 0 && (
+                <div style={{
+                  padding: '1rem',
+                  color: 'rgba(255, 255, 255, 0.4)',
+                  fontSize: '0.85rem',
+                  textAlign: 'center'
+                }}>
+                  No matches found
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Select Mode Actions */}
         {selectMode && (
           <div className="fade-in" style={{
@@ -678,7 +856,7 @@ export default function PhotosGallery() {
                 fontSize: '0.85rem'
               }}
             >
-              {selectedPhotos.size === photos.length ? 'Deselect All' : 'Select All'}
+              {selectedPhotos.size === displayPhotos.length ? 'Deselect All' : 'Select All'}
             </button>
             {selectedPhotos.size > 0 && (
               <button
