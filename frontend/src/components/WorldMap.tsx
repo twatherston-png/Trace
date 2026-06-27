@@ -31,9 +31,19 @@ export default function WorldMap() {
   const [countryCount, setCountryCount] = useState(0)
   const [status, setStatus] = useState<string>('Loading map...')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [forceRefresh, setForceRefresh] = useState(false)
 
   const handleRefresh = () => {
     setStatus('Refreshing...')
+    setRefreshKey(prev => prev + 1)
+    setForceRefresh(false)
+  }
+
+  const handleForceRefresh = async () => {
+    setStatus('Clearing cache and re-geocoding...')
+    // Clear all cached locations
+    await supabase.from('photo_locations').delete().neq('photo_id', '')
+    setForceRefresh(true)
     setRefreshKey(prev => prev + 1)
   }
 
@@ -91,16 +101,19 @@ export default function WorldMap() {
 
       // Check which photos already have city/country data cached
       const photoIds = photos.map(p => p.id)
-      const { data: cachedLocations } = await supabase
-        .from('photo_locations')
-        .select('photo_id, city, country, latitude, longitude')
-        .in('photo_id', photoIds)
+      let cachedMap = new Map()
+      
+      if (!forceRefresh) {
+        const { data: cachedLocations } = await supabase
+          .from('photo_locations')
+          .select('photo_id, city, country, latitude, longitude')
+          .in('photo_id', photoIds)
 
-      const cachedMap = new Map()
-      if (cachedLocations) {
-        cachedLocations.forEach(loc => {
-          cachedMap.set(loc.photo_id, loc)
-        })
+        if (cachedLocations) {
+          cachedLocations.forEach(loc => {
+            cachedMap.set(loc.photo_id, loc)
+          })
+        }
       }
 
       // Separate photos into cached and needs geocoding
@@ -373,6 +386,23 @@ export default function WorldMap() {
           title="Refresh map"
         >
           ↻
+        </button>
+        <button
+          onClick={handleForceRefresh}
+          style={{
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            padding: '0.5rem 0.6rem',
+            borderRadius: '8px',
+            border: '1px solid rgba(231, 76, 60, 0.3)',
+            color: '#E74C3C',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            lineHeight: 1
+          }}
+          title="Force re-geocode all photos"
+        >
+          ⟲
         </button>
       </div>
     </div>
