@@ -159,6 +159,7 @@ export default function Dashboard() {
 
     if (uploadError) {
       console.error('Error uploading photo:', uploadError)
+      alert('Failed to upload photo: ' + uploadError.message)
       return
     }
 
@@ -166,7 +167,13 @@ export default function Dashboard() {
       .from('photos')
       .getPublicUrl(filePath)
 
+    if (!data?.publicUrl) {
+      alert('Failed to get photo URL')
+      return
+    }
+
     setNewPin({ ...newPin, photo_url: data.publicUrl })
+    alert('Photo uploaded successfully!')
   }
 
   return (
