@@ -17,6 +17,22 @@ export default function Dashboard() {
     loadData()
   }, [])
 
+  // Set up global handlers for WorldMap navigation
+  useEffect(() => {
+    ;(window as any).__viewPhotos = (photoIds: string, locationLabel: string) => {
+      navigate('/photos', { state: { photoIds, locationLabel } })
+    }
+    
+    ;(window as any).__viewTrip = (tripId: string) => {
+      navigate(`/trips/${tripId}`)
+    }
+    
+    return () => {
+      delete (window as any).__viewPhotos
+      delete (window as any).__viewTrip
+    }
+  }, [navigate])
+
   const loadData = async () => {
     const { data: tripsData } = await supabase
       .from('trips')

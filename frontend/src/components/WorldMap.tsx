@@ -271,6 +271,7 @@ export default function WorldMap() {
 
       el.innerHTML = cluster.photos.length > 1 ? `${cluster.photos.length}` : '📍'
 
+      const photoIds = cluster.photos.map(p => p.id).join(',')
       const popupContent = `
         <div style="color: black; padding: 0.5rem; min-width: 200px;">
           <strong style="font-size: 1.1rem;">${cluster.city}</strong><br/>
@@ -280,7 +281,7 @@ export default function WorldMap() {
             ${cluster.tripIds.length > 0 ? `<br/>✈️ ${cluster.tripIds.length} trip${cluster.tripIds.length !== 1 ? 's' : ''}` : ''}
           </div>
           <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
-            <button onclick="window.__viewPhotos?.('${cluster.city}', '${cluster.country}')" style="flex: 1; padding: 0.5rem; border: none; background: #D4AF37; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
+            <button onclick="window.__viewPhotos?.('${photoIds}', '${cluster.city}, ${cluster.country}')" style="flex: 1; padding: 0.5rem; border: none; background: #D4AF37; color: white; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold;">
               View Photos
             </button>
             ${cluster.tripIds.length > 0 ? `

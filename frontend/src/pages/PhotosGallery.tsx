@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Photo } from '../types'
 import TopBar from '../components/TopBar'
@@ -8,7 +9,11 @@ import PhotoLightbox from '../components/PhotoLightbox'
 import EXIF from 'exif-js'
 
 export default function PhotosGallery() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const locationState = location.state as { photoIds?: string; locationLabel?: string } | null
   const [photos, setPhotos] = useState<Photo[]>([])
+  const [filteredPhotos, setFilteredPhotos] = useState<Photo[] | null>(null)
   const [trips, setTrips] = useState<any[]>([])
   const [days, setDays] = useState<any[]>([])
   const [sortBy, setSortBy] = useState<'date' | 'trip' | 'location'>('date')
@@ -43,6 +48,16 @@ export default function PhotosGallery() {
     loadTrips()
     loadDays()
   }, [])
+
+  useEffect(() => {
+    if (locationState?.photoIds) {
+      const ids = locationState.photoIds.split(',').filter(id => id.trim())
+      const filtered = photos.filter(p => ids.includes(p.id))
+      setFilteredPhotos(filtered)
+    } else {
+      setFilteredPhotos(null)
+    }
+  }, [locationState, photos])
 
   const loadTrips = async () => {
     const { data } = await supabase.from('trips').select('*').order('start_date', { ascending: false })
@@ -470,7 +485,8 @@ export default function PhotosGallery() {
     }
   }
 
-  const sortedPhotos = [...photos].sort((a, b) => {
+  const displayPhotos = filteredPhotos || photos
+  const sortedPhotos = [...displayPhotos].sort((a, b) => {
     if (sortBy === 'date') {
       return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
     }
@@ -506,8 +522,40 @@ export default function PhotosGallery() {
       paddingTop: '76px',
       paddingBottom: '86px'
     }}>
-      <TopBar title="Photos" subtitle={`${photos.length} memories captured`} />
+      <TopBar 
+        title="Photos" 
+        subtitle={locationState?.locationLabel ? `${displayPhotos.length} photos in ${locationState.locationLabel}` : `${photos.length} memories captured`} 
+      />
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        {locationState?.locationLabel && (
+          <div style={{
+            background: 'rgba(212, 175, 55, 0.1)',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
+            borderRadius: '12px',
+            padding: '0.75rem 1rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span style={{ color: '#D4AF37', fontSize: '0.9rem' }}>
+              📍 {locationState.locationLabel}
+            </span>
+            <button
+              onClick={() => navigate('/photos')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255, 255, 255, 0.6)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                padding: '0.25rem 0.5rem'
+              }}
+            >
+              ✕ Clear
+            </button>
+          </div>
+        )}
         {/* Notification */}
         {notification && (
           <div className="fade-in" style={{
