@@ -31,9 +31,26 @@ export default function Dashboard() {
       navigate(`/trips/${tripId}`)
     }
     
+    ;(window as any).__deletePin = async (pinId: string) => {
+      if (!confirm('Delete this pin?')) return
+      
+      const { error } = await supabase
+        .from('pins')
+        .delete()
+        .eq('id', pinId)
+      
+      if (error) {
+        alert('Failed to delete pin: ' + error.message)
+      } else {
+        // Refresh the page to update the map
+        window.location.reload()
+      }
+    }
+    
     return () => {
       delete (window as any).__viewPhotos
       delete (window as any).__viewTrip
+      delete (window as any).__deletePin
     }
   }, [navigate])
 

@@ -376,9 +376,7 @@ export default function WorldMap({ onCountryCount }: Props) {
       el.style.width = '28px'
       el.style.height = '28px'
       el.style.borderRadius = '50%'
-      el.style.background = pinItems.length > 0 && photoItems.length === 0
-        ? 'linear-gradient(135deg, #9B59B6 0%, #8E44AD 100%)'
-        : 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
+      el.style.background = 'linear-gradient(135deg, #D4AF37 0%, #E5C458 100%)'
       el.style.border = '2px solid white'
       el.style.cursor = 'pointer'
       el.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.3)'
@@ -403,18 +401,24 @@ export default function WorldMap({ onCountryCount }: Props) {
       if (dayItems.length > 0) details += `✈️ ${dayItems.length} trip stop${dayItems.length !== 1 ? 's' : ''}<br/>`
       details += `</div>`
       
-      // Show individual pin details (date and notes)
+      // Show individual pin details (date, notes, photo, delete)
       let pinDetails = ''
       if (pinItems.length > 0) {
         pinDetails = `<div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e0e0e0;">`
         pinItems.forEach(pin => {
+          const pinId = pin.id.replace('pin-', '')
           if (pin.date) {
             const dateStr = new Date(pin.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
             pinDetails += `<div style="font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">📅 ${dateStr}</div>`
           }
+          if (pin.url) {
+            pinDetails += `<img src="${pin.url}" style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 0.5rem;" />`
+          }
           if (pin.notes) {
             pinDetails += `<div style="font-size: 0.85rem; color: #333; margin-bottom: 0.5rem;">${pin.notes}</div>`
           }
+          // Delete button for standalone pins
+          pinDetails += `<button onclick="window.__deletePin?.('${pinId}')" style="margin-top: 0.25rem; padding: 0.35rem 0.75rem; border: 1px solid #e74c3c; background: transparent; color: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑 Delete Pin</button>`
         })
         pinDetails += `</div>`
       }
